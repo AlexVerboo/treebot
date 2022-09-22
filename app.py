@@ -1,14 +1,14 @@
-#import os
-#import sys
+import os
+import sys
 #
-#from urllib.parse import urlencode
-#from urllib.request import Request, urlopen
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 #
-#from flask import Flask, request
+from flask import Flask, request
 #
 app = Flask(__name__)
 #
-#@app.route('/', methods=['POST'])
+@app.route('/', methods=['POST'])
 #def webhook():
 #  data = request.get_json()
 #  log('Recieved {}'.format(data))
