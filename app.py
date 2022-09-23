@@ -1,14 +1,15 @@
 import os
 import sys
-import groupy
 import requests
 
 from urllib.parse import urlencode
-from groupy.client import Client as groupmeClient
 from urllib.request import Request, urlopen
 from flask import Flask, request
 from selenium import webdriver
 app = Flask(__name__)
+@app.route("/", methods=['GET'])
+def hello():
+    return "hey", 200
 @app.route('/', methods=['POST'])
 def webhook():
   data = request.get_json()
