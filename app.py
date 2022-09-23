@@ -13,14 +13,15 @@ def hello():
 @app.route('/', methods=['POST'])
 def webhook():
   data = request.get_json()
+  data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
-    if data['text'] == 'Bot?':
+    if data['text'] == 'bot?':
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
         msg ='Yes?'.format(data['name'], data['text'])
         send_message(msg)
-    if data['text'.lower()] == 'back out':
+    if data['text'] == 'back out':
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
