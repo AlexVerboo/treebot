@@ -24,9 +24,10 @@ def webhook():
     if data['text'] == 'back out':
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
-    if 'soft off' in data['text']:
+    if 'soft off' in data['text'] or 'softoff' in data['text']:
         msg ='Manos Voice: softoffsoftoffsoftoffsoftoff everybody SOFT OFF!'.format(data['name'], data['text'])
         send_message(msg)
+
   return "ok", 200
 
 def send_message(msg):
