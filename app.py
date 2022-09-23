@@ -1,5 +1,14 @@
 import os
 import sys
+import requests
+headers = 
+{
+ 'User-Agent': 'Mozilla/5.0 (Windows NT 6.3; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)     Chrome/37.0.2049.0 Safari/537.36'
+}
+
+r = requests.get('http://www.booking.com/reviewlist.html?cc1=tr;pagename=sapphire', headers=headers)
+print r
+print r.headers
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
