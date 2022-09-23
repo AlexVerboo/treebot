@@ -4,6 +4,7 @@ import groupy
 from groupy.client import Client as groupmeClient
 from urllib.request import Request, urlopen
 from flask import Flask, request
+from selenium import webdriver
 app = Flask(__name__)
 @app.route('/', methods=['POST'])
 def webhook():
@@ -19,10 +20,7 @@ def webhook():
 
 def send_message(msg):
   url  = 'https://api.groupme.com/v3/bots/post'
-  data = {
-          'bot_id' : os.getenv('GROUPME_BOT_ID'),
-          'text'   : msg,
-         }
+  data = {'bot_id' : os.getenv('GROUPME_BOT_ID'),'text'   : msg}
   request = Request(url, urlencode(data).encode())
   json = urlopen(request).read().decode()
   
