@@ -2,9 +2,7 @@ import os
 import sys
 import groupy
 from groupy.client import Client as groupmeClient
-import urlencode
 from urllib.request import Request, urlopen
-
 from flask import Flask, request
 
 app = Flask(__name__)
