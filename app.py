@@ -20,7 +20,7 @@ def webhook():
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
         msg ='Yes?'.format(data['name'], data['text'])
         send_message(msg)
-    if data['text'].str.lower == 'back out':
+    if data['text'.lower] == 'back out':
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
