@@ -16,7 +16,7 @@ def webhook():
     if data['text'] == 'Bot?':
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
         msg ='Yes?'.format(data['name'], data['text'])
-       # send_message(msg)
+        send_message(msg)
   return "ok", 200
 
 def send_message(msg):
@@ -25,8 +25,9 @@ def send_message(msg):
           'bot_id' : os.getenv('GROUPME_BOT_ID'),
           'text'   : msg,
          }
-  request = Request(url, urlencode(data).encode())
-  #json = urlopen(request).read().decode()
+  #request = Request(url, urlencode(data).encode())
+  request = requests.post(url, json = data)
+  json = urlopen(request).read().decode()
   
 def log(msg):
   print(str(msg))
