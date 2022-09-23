@@ -9,7 +9,7 @@ from selenium import webdriver
 app = Flask(__name__)
 @app.route("/", methods=['GET'])
 def hello():
-    return "hey", 200
+    return "Trees in Space!", 200
 @app.route('/', methods=['POST'])
 def webhook():
   data = request.get_json()
@@ -20,7 +20,7 @@ def webhook():
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
         msg ='Yes?'.format(data['name'], data['text'])
         send_message(msg)
-    if data['text'] == 'back out':
+    if data['text'].str.lower == 'back out':
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
