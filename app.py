@@ -16,7 +16,7 @@ def webhook():
     if data['text'] == 'Bot?':
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
         msg ='Yes?'.format(data['name'], data['text'])
-        send_message(msg)
+       # send_message(msg)
   return "ok", 200
 
 def send_message(msg):
