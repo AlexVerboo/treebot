@@ -1,6 +1,8 @@
 import os
 import sys
 import groupy
+import requests
+
 from urllib.parse import urlencode
 from groupy.client import Client as groupmeClient
 from urllib.request import Request, urlopen
