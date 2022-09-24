@@ -21,7 +21,7 @@ def webhook():
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
         msg ='Yes?'.format(data['name'], data['text'])
         send_message(msg)
-    if data['text'] == 'back out':
+    if 'back out' in data['text'] or 'backout' in data['text']:
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
     if 'soft off' in data['text'] or 'softoff' in data['text']:
