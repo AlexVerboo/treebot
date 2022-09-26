@@ -8,7 +8,6 @@ from urllib.request import Request, urlopen
 from flask import Flask, request
 from selenium import webdriver
 app = Flask(__name__)
-byebye = ["night-night", "sweet dreams, I love you", "Bye Fucker","Adios","Yeah, go away already. Everyone!, They're gone, lets play!"]
 @app.route("/", methods=['GET'])
 def hello():
     return "Trees in Space!", 200
@@ -17,11 +16,14 @@ def webhook():
   data = request.get_json()
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
+
+  byebye = ["night-night", "sweet dreams, I love you", "Bye Fucker","Adios","Yeah, go away already. Everyone!, They're gone, lets play!"]
+  hihi = ["Hello", "Yes?", "Hola","hu?",data['name']+"?"]
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
     if data['text'] == 'bot?':
         #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
-        msg ='Yes?'.format(data['name'], data['text'])
+        msg =random.choice(hihi).format(data['name'], data['text'])
         send_message(msg)
     if 'back out' in data['text'] or 'backout' in data['text']:
         msg ='Bowls Time!'.format(data['name'], data['text'])
