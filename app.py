@@ -20,7 +20,7 @@ def webhook():
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
 
-  byebye = ["night-night "+data['name'], "sweet dreams, I love you "+data['name'], "Bye Fucker","Adios "+data['name'],"Yeah, go away already. Everyone!, "+data['name']+" is gone, lets play!"]
+  byebye = ["night-night "+data['name'], "sweet dreams, I love you "+data['name'], "Bye Fucker","Adiós "+data['name'],"Yeah, go away already. Everyone!, "+data['name']+" is gone, lets play!"]
   hihi = ["Hello", "Yes?", "Hola","uh?",data['name']+"?"]
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
