@@ -1,6 +1,7 @@
 import os
 import sys
 import requests
+import random
 
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -28,7 +29,7 @@ def webhook():
     if 'soft off' in data['text'] or 'softoff' in data['text']:
         msg ='Manos Voice: softoffsoftoffsoftoffsoftoff everybody SOFT OFF!'.format(data['name'], data['text'])
         send_message(msg)
-    if 'that’s it for me boys' in data['text'] or 'bye bye' in data['text']:
+    if 'thats it for me boys' in data['text'] or 'that’s it for me boys' in data['text'] or'bye bye' in data['text']:
         msg =random.choice(byebye).format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
