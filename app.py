@@ -2,6 +2,7 @@ import os
 import sys
 import requests
 import random
+import time
 
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -12,7 +13,9 @@ app = Flask(__name__)
 def hello():
     return "Trees in Space!", 200
 @app.route('/', methods=['POST'])
+
 def webhook():
+  time.sleep( 1 )
   data = request.get_json()
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
