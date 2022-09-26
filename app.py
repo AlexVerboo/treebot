@@ -7,6 +7,7 @@ from urllib.request import Request, urlopen
 from flask import Flask, request
 from selenium import webdriver
 app = Flask(__name__)
+byebye = ["night-night", "sweet dreams, I love you", "Bye Fucker","Adios","Yeah, go away already. Everyone!, They're gone, lets play!"]
 @app.route("/", methods=['GET'])
 def hello():
     return "Trees in Space!", 200
@@ -27,7 +28,9 @@ def webhook():
     if 'soft off' in data['text'] or 'softoff' in data['text']:
         msg ='Manos Voice: softoffsoftoffsoftoffsoftoff everybody SOFT OFF!'.format(data['name'], data['text'])
         send_message(msg)
-
+    if 'that’s it for me boys' in data['text'] or 'bye bye' in data['text']:
+        msg =random.choice(byebye).format(data['name'], data['text'])
+        send_message(msg)
   return "ok", 200
 
 def send_message(msg):
