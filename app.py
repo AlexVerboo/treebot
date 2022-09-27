@@ -37,6 +37,9 @@ def webhook():
     if 'thats it for me boys' in data['text'] or 'that’s it for me boys' in data['text'] or'bye bye' in data['text']:
         msg =random.choice(byebye).format(data['name'], data['text'])
         send_message(msg)
+    if 'fuck' in data['text'] and 'you' in data['text'] and 'bot' in data['text']:
+        msg =random.choice(byebye).format(data['name'], data['text'])
+        send_message(msg)
   return "ok", 200
 
 def send_message(msg):
