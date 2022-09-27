@@ -38,7 +38,7 @@ def webhook():
         msg =random.choice(byebye).format(data['name'], data['text'])
         send_message(msg)
     if 'fuck' in data['text'] and 'you' in data['text'] and 'bot' in data['text']:
-        msg =random.choice(byebye).format(data['name'], data['text'])
+        msg =random.choice(rude).format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
 
