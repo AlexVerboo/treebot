@@ -21,7 +21,7 @@ def webhook():
   time.sleep( 1 )
   byebye = ["night-night "+data['name'], "sweet dreams, I love you "+data['name'], "Bye Fucker","Adiós "+data['name'],"Yeah, go away already. Everyone!, "+data['name']+" is gone, lets play!"]
   hihi = ["Hello", "Yes?", "Hola","uh?",data['name']+"?"]
-  rude = ["Say that one more time and I wont sell you my bath water again.", "Fuck you "+data['name'], "Yeah right, says the halo 4 lover","Watch Out, this one learned from Drawn Together...�","Oh no, what do I do now? "]
+  rude = ["Say that one more time and I wont sell you my bath water again.", "Fuck you "+data['name'], "Yeah right, says the halo 4 lover","Watch Out, this one learned from Drawn Together...☃☃","Oh no, what do I do now? "]
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
     if data['text'] == 'bot?':
