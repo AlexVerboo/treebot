@@ -36,7 +36,7 @@ def webhook():
       if random.randint(1, 10) < 8 :
         msg =rules.format(data['name'], data['text'])
       else : 
-        msg ='You know, I like you, have this:'.format(data['name'], data['text'])
+        msg ='You know, I like you '+data['name']+', have this:'.format(data['name'], data['text'])
         send_message(msg)
         msg ='https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
       send_message(msg)
