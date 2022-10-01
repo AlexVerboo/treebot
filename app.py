@@ -33,8 +33,11 @@ def webhook():
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
     if 'rules!' in data['text'] :
+      if random.randint(1, 10) < 9 :
         msg =rules.format(data['name'], data['text'])
-        send_message(msg)
+      else : 
+        msg ='https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
+      send_message(msg)
     #if 'fuck me' in data['text'] and data['name'] = :
      #   msg ='Manos Voice: softoffsoftoffsoftoffsoftoff everybody SOFT OFF!'.format(data['name'], data['text'])
       #  send_message(msg)
