@@ -44,7 +44,7 @@ def webhook():
         msg ='You know, I like you '+data['name']+', have this:\n https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
         send_message(msg)
     if 'fuck me' in data['text'] and data['name'] == 'Man Of War':
-        msg ='If you gave a chanse I would take it 🎵🎵'.format(data['name'], data['text'])
+        msg ='If you gave a chance I would take it 🎵🎵'.format(data['name'], data['text'])
         send_message(msg)
     if 'thats it for me boys' in data['text'] or 'that’s it for me boys' in data['text'] or'bye bye' in data['text']:
         msg =random.choice(byebye).format(data['name'], data['text'])
