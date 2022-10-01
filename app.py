@@ -53,7 +53,7 @@ def webhook():
     if 'fuck' in data['text'] and 'you' in data['text'] and 'bot' in data['text']:
         msg =random.choice(rude).format(data['name'], data['text'])
         send_message(msg)
-    if 'who is the best at halo' in data['text'] :
+    if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
         msg =random.choice(trees).format(data['name'], data['text'])
         send_message(msg)    
   return "ok", 200
