@@ -33,14 +33,12 @@ def webhook():
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
     if 'rules!' in data['text'] :
-      if random.randint(1, 10) > 8 :
-        msg1 =rules.format(data['name'], data['text'])
-        send_message(msg1)
+      if random.randint(1, 10) < 8 :
+        msg =rules.format(data['name'], data['text'])
+        send_message(msg)
       else : 
-        msg1 ='You know, I like you '+data['name']+', have this: https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
-        msg2 ='https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
-        send_message(msg1)
-        send_message(msg2)  
+        msg ='You know, I like you '+data['name']+', have this:\n https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
+        send_message(msg)
     if 'fuck me' in data['text'] and data['name'] == 'Man Of War':
         msg ='If you gave a chanse I would take it 🎵🎵'.format(data['name'], data['text'])
         send_message(msg)
