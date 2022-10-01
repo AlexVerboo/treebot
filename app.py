@@ -21,7 +21,7 @@ def webhook():
   time.sleep( 1 )
   byebye = ["night-night "+data['name'], "sweet dreams, I love you "+data['name'], "Bye Fucker","Adiós "+data['name'],"Yeah, go away already. Everyone!, "+data['name']+" is gone, lets play!"]
   hihi = ["Hello", "Yes?", "Hola","uh?",data['name']+"?"]
-  rules = ["This are the Group rules (this also apply for the parties and any communication channels as a group)\n-) No discrimination\n-) No religion\n-) No politics (including other countries)\n-) No spamming"]
+  rules = "This are the Group rules (this also apply for the parties and any communication channels as a group)\n-) No discrimination\n-) No religion\n-) No politics (including other countries)\n-) No spamming"
   rude = ["Say that one more time and I wont sell you my bath water again.", "Fuck you "+data['name'], "Yeah right, says the halo 4 lover","Watch Out, this one learned from Drawn Together...🤪🤪","Oh no, what do I do now? 💥💥 "]
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
@@ -33,7 +33,7 @@ def webhook():
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
     if 'rules!' in data['text'] :
-        msg =random.choice(rules).format(data['name'], data['text'])
+        msg =rules.format(data['name'], data['text'])
         send_message(msg)
     #if 'fuck me' in data['text'] and data['name'] = :
      #   msg ='Manos Voice: softoffsoftoffsoftoffsoftoff everybody SOFT OFF!'.format(data['name'], data['text'])
