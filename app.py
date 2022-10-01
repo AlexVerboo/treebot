@@ -20,9 +20,10 @@ def webhook():
   log('Recieved {}'.format(data))
   time.sleep( 1 )
   byebye = ["night-night "+data['name'], "sweet dreams, I love you "+data['name'], "Bye Fucker","Adiós "+data['name'],"Yeah, go away already. Everyone!, "+data['name']+" is gone, lets play!"]
-  hihi = ["Hello", "Yes?", "Hola","uh?",data['name']+"?"]
+  hihi = ["Hello", "Mande","Yes?", "Hola","uh?",data['name']+"?"]
   rules = "These are the Group rules (They also apply for the parties and any communication channels as a group)\n-) No discrimination\n-) No religion\n-) No politics (including other countries)\n-) No spamming"
   rude = ["Say that one more time and I wont sell you my bath water again.", "Fuck you "+data['name'], "Yeah right, says the halo 4 lover","Watch Out, this one learned from Drawn Together...🤪🤪","Oh no, what do I do now? 💥💥 "]
+  spanish = ["Si", "Sometimes","Yeah, turns out my father is Mexican, Can You belive it? I guess not everyone is going up the borther after all", "Yes but please dont tell ICE","Yes sir, I can order TexMex the right way","👍 🤠"]
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
     if data['text'] == 'bot?':
@@ -31,6 +32,9 @@ def webhook():
         send_message(msg)
     if 'back out' in data['text'] or 'backout' in data['text']:
         msg ='Bowls Time!'.format(data['name'], data['text'])
+        send_message(msg)
+    if 'do you speak spanish' in data['text'] and 'bot' in data['text']:
+        msg =random.choice(spanish).format(data['name'], data['text'])
         send_message(msg)
     if 'rules!' in data['text'] :
       if random.randint(1, 10) < 8 :
