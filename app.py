@@ -34,6 +34,9 @@ def webhook():
     if 'back out' in data['text'] or 'backout' in data['text']:
         msg ='Bowls Time!'.format(data['name'], data['text'])
         send_message(msg)
+    if 'good bot' in data['text']:
+        msg ='🐶'.format(data['name'], data['text'])
+        send_message(msg)
     if 'do you speak spanish?' in data['text'] and 'bot' in data['text']:
         msg =random.choice(spanish).format(data['name'], data['text'])
         send_message(msg)
