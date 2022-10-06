@@ -103,7 +103,7 @@ def ObtenerHoja(mapa):
           flat_list.append(item)
   seleccion=CloseMatch(mapa,flat_list)
   if seleccion:
-    output="These are the records for " +mapa+ " \n "
+    output="These are the records for " +seleccion[0]+ " \n "
     for x in list_of_hashes:
         if x:
             if x[1].lower() == seleccion[0]:
