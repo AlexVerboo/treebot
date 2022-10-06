@@ -97,12 +97,16 @@ def ObtenerHoja(mapa):
 
   # Extract and print all of the values
   list_of_hashes = sheet.get("B:D")
-  seleccion=CloseMatch(mapa,sheet.get("C:C"))
+  flat_list = []
+  for sublist in sheet.get("C:C"):
+      for item in sublist:
+          flat_list.append(item)
+  seleccion=CloseMatch(mapa,flat_list)
   if seleccion:
     output="These are the records for " +mapa+ " \n "
     for x in list_of_hashes:
         if x:
-            if x[1].lower() == mapa:
+            if x[1].lower() == seleccion:
                 output+= x[0]+" "+ x[2]+"\n "
   else:
       output = "Yeah, dude, I dont see that one on the Big team maps records"
@@ -120,11 +124,13 @@ def listToString(s):
   # return string
   return str1
 def CloseMatch(str,posibilities):
+  
   for i in range(len(posibilities)):
     if i:
-      posibilities[i][0] = posibilities[i][0].lower()
+      posibilities[i] = posibilities[i].lower()
   n = 1
   cutoff = 0.8
+  
   close_matches = difflib.get_close_matches(str, 
                 posibilities, n, cutoff)
   return(close_matches)

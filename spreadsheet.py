@@ -26,16 +26,24 @@ def ObtenerHoja(mapa):
           if x[1].lower() == mapa:
               output+= x[0]+" "+ x[2]+"\n "
   print(sheet.get("B:B"))
-  for i in range(len(sheet.get("B:B"))):
-    if i:
-      sheet.get("B:B")[i][0] = sheet.get("B:B")[i][0].lower()
+
+def CloseMatch(str,posibilities):
+    for i in range(len(posibilities)):
+        if i:
+             posibilities[i] = posibilities[i].lower()
+    n = 1
+    cutoff = 0.8
+    close_matches = difflib.get_close_matches(str, 
+                  posibilities, n, cutoff)
+
+    return(close_matches)
+
 possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
-n = 1
-cutoff = 0.8
-comando = "records! deadlock"
+comando = "records! deaDlock"
 mapa= comando[9:]
-print (mapa)
-close_matches = difflib.get_close_matches(mapa, 
-                possibilities, n, cutoff)
-print(close_matches)
-ObtenerHoja(mapa)
+flat_list = []
+for sublist in sheet.get("C:C"):
+    for item in sublist:
+        flat_list.append(item)
+seleccion=CloseMatch(mapa,flat_list)
+print (seleccion)
