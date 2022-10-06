@@ -95,11 +95,13 @@ def ObtenerHoja(mapa):
 
   # Extract and print all of the values
   list_of_hashes = sheet.get("B:D")
-  output="This are the records for " +mapa+ " \n "
+  output="These are the records for " +mapa+ " \n "
   for x in list_of_hashes:
       if x:
           if x[1].lower() == mapa:
               output+= x[0]+" "+ x[2]+"\n "
+  if output == "These are the records for " +mapa+ " \n ":
+    output = "Yeah, dude, I dont know that one"
   return output
 
 def listToString(s):
