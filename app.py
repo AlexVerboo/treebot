@@ -67,7 +67,7 @@ def webhook():
         msg =random.choice(trees).format(data['name'], data['text'])
         send_message(msg)
     if 'records!' in data['text']:
-        msg= ObtenerHoja().format(data['name'], data['text'])
+        msg= listToString(ObtenerHoja()).format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
 
@@ -96,3 +96,16 @@ def ObtenerHoja():
   # Extract and print all of the values
   list_of_hashes = sheet.get_all_values()
   return list_of_hashes
+
+def listToString(s):
+ 
+  # initialize an empty string
+  str1 = ""
+
+  # traverse in the string
+  for ele in s:
+      str1 += ele
+
+  # return string
+  return str1
+ 
