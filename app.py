@@ -21,7 +21,7 @@ def webhook():
   client = gspread.authorize(creds)
   sheet = client.open("Trees in space game Records").sheet1
   list_of_hashes = sheet.get_all_records()
-  #print(list_of_hashes)
+  print(list_of_hashes)
   data = request.get_json()
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
