@@ -67,7 +67,7 @@ def webhook():
         msg =random.choice(trees).format(data['name'], data['text'])
         send_message(msg)
     if 'records!' in data['text']:
-        msg= ObtenerHoja().format(data['name'], data['text'])¨
+        msg= ObtenerHoja().format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
 
