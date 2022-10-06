@@ -65,7 +65,10 @@ def webhook():
         send_message(msg)
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
         msg =random.choice(trees).format(data['name'], data['text'])
-        send_message(msg)    
+        send_message(msg)
+    if 'records!' in data['text']:
+        msg= ObtenerHoja().format(data['name'], data['text'])¨
+        send_message(msg)
   return "ok", 200
 
 def send_message(msg):
@@ -81,3 +84,15 @@ def send_message(msg):
 def log(msg):
   print(str(msg))
   sys.stdout.flush()
+
+def ObtenerHoja():
+  scope = ['https://spreadsheets.google.com/feeds',
+           'https://www.googleapis.com/auth/drive']
+  creds = ServiceAccountCredentials.from_json_keyfile_name(
+      'client_secret.json', scope)
+  client = gspread.authorize(creds)
+  sheet = client.open("Trees in space game Records").sheet1
+
+  # Extract and print all of the values
+  list_of_hashes = sheet.get_all_values()
+  return list_of_hashes
