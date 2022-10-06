@@ -67,7 +67,7 @@ def webhook():
         msg =random.choice(trees).format(data['name'], data['text'])
         send_message(msg)
     if 'records!' in data['text']:
-        msg= listToString(ObtenerHoja()).format(data['name'], data['text'])
+        msg= listToString(ObtenerHoja(data['text'][9:])).format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
 
@@ -85,7 +85,7 @@ def log(msg):
   print(str(msg))
   sys.stdout.flush()
 
-def ObtenerHoja():
+def ObtenerHoja(mapa):
   scope = ['https://spreadsheets.google.com/feeds',
            'https://www.googleapis.com/auth/drive']
   creds = ServiceAccountCredentials.from_json_keyfile_name(
@@ -94,8 +94,13 @@ def ObtenerHoja():
   sheet = client.open("Trees in space game Records").sheet1
 
   # Extract and print all of the values
-  valoresgooglesheet = sheet.col_values(1)
-  return valoresgooglesheet
+  list_of_hashes = sheet.get("B:D")
+  output="This are the records for " +mapa+ " \n "
+  for x in list_of_hashes:
+      if x:
+          if x[1].lower() == mapa:
+              output+= x[0]+" "+ x[2]+"\n "
+  return output
 
 def listToString(s):
  
