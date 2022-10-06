@@ -101,7 +101,7 @@ def ObtenerHoja(mapa):
           if x[1].lower() == mapa:
               output+= x[0]+" "+ x[2]+"\n "
   if output == "These are the records for " +mapa+ " \n ":
-    output = "Yeah, dude, I dont know that one"
+    output = "Yeah, dude, I dont see that one on the Big team maps records"
   return output
 
 def listToString(s):
