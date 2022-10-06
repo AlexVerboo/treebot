@@ -98,7 +98,7 @@ def ObtenerHoja(mapa):
   # Extract and print all of the values
   list_of_hashes = sheet.get("B:D")
   seleccion=CloseMatch(mapa,sheet.get("C:C"))
-  if seleccion:
+  if seleccion[0]:
     output="These are the records for " +mapa+ " \n "
     for x in list_of_hashes:
         if x:
