@@ -26,7 +26,9 @@ def ObtenerHoja(mapa):
           if x[1].lower() == mapa:
               output+= x[0]+" "+ x[2]+"\n "
   print(sheet.get("B:B"))
-  return output
+  for i in range(len(sheet.get("B:B"))):
+    if i:
+      sheet.get("B:B")[i][0] = sheet.get("B:B")[i][0].lower()
 possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
 n = 1
 cutoff = 0.8

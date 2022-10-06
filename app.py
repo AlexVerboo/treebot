@@ -122,7 +122,7 @@ def listToString(s):
 def CloseMatch(str,posibilities):
   for i in range(len(posibilities)):
     if i:
-      posibilities[i] = posibilities[i].lower()
+      posibilities[i][0] = posibilities[i][0].lower()
   n = 1
   cutoff = 0.8
   close_matches = difflib.get_close_matches(str, 
