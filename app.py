@@ -4,6 +4,7 @@ import requests
 import random
 import time
 import gspread
+import difflib
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from flask import Flask, request
@@ -93,15 +94,18 @@ def ObtenerHoja(mapa):
   client = gspread.authorize(creds)
   sheet = client.open("Trees in space game Records").sheet1
 
+
   # Extract and print all of the values
   list_of_hashes = sheet.get("B:D")
-  output="These are the records for " +mapa+ " \n "
-  for x in list_of_hashes:
-      if x:
-          if x[1].lower() == mapa:
-              output+= x[0]+" "+ x[2]+"\n "
-  if output == "These are the records for " +mapa+ " \n ":
-    output = "Yeah, dude, I dont see that one on the Big team maps records"
+  seleccion=CloseMatch(mapa,sheet.get("C:C"))
+  if seleccion:
+    output="These are the records for " +mapa+ " \n "
+    for x in list_of_hashes:
+        if x:
+            if x[1].lower() == mapa:
+                output+= x[0]+" "+ x[2]+"\n "
+  else:
+      output = "Yeah, dude, I dont see that one on the Big team maps records"
   return output
 
 def listToString(s):
@@ -115,4 +119,11 @@ def listToString(s):
 
   # return string
   return str1
- 
+def CloseMatch(str,posibilities):
+  for i in range(len(posibilities)):
+    posibilities[i] = posibilities[i].lower()
+  n = 1
+  cutoff = 0.8
+  close_matches = difflib.get_close_matches(str, 
+                posibilities, n, cutoff)
+  return(close_matches)
