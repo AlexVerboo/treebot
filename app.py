@@ -96,7 +96,7 @@ def ObtenerHoja(mapa):
 
 
   # Extract and print all of the values
-  list_of_hashes = sheet.get("B:D")
+  list_of_hashes = sheet.get("A:D")
   flat_list = []
   for sublist in sheet.get("C:C"):
       for item in sublist:
@@ -106,8 +106,8 @@ def ObtenerHoja(mapa):
     output="These are the records for " +seleccion[0]+ " \n "
     for x in list_of_hashes:
         if x:
-            if x[1].lower() == seleccion[0]:
-                output+= x[0]+" "+ x[2]+"\n "
+            if x[2].lower() == seleccion[0]:
+                output+= x[0]+" "+x[1]+" "+ x[3]+"\n "
   else:
       output = "Yeah, dude, I dont see that one on the Big team maps records"
   return output
