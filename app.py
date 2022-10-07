@@ -105,7 +105,7 @@ def ObtenerHoja(mapa):
   if seleccion:
     output="These are the records for " +seleccion[0]+ " \n "
     for x in list_of_hashes:
-        if x:
+        if x and x != 0:
             if x[2].lower() == seleccion[0]:
                 output+= x[0]+" "+x[1]+" "+ x[3]+"\n "
   else:

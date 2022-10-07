@@ -47,3 +47,4 @@ for sublist in sheet.get("C:C"):
         flat_list.append(item)
 seleccion=CloseMatch(mapa,flat_list)
 print (seleccion)
+print (sheet.get("A:D"))
