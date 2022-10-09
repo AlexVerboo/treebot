@@ -17,12 +17,6 @@ def hello():
 @app.route('/', methods=['POST'])
 
 def webhook():
-  #scope = ['https://spreadsheets.google.com/feeds']
-  #creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
-  #client = gspread.authorize(creds)
-  #sheet = client.open("Trees in space game Records").sheet1
-  #MatrizRecords = sheet.get_all_records()
-  #print(MatrizRecords)
   data = request.get_json()
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
@@ -36,40 +30,43 @@ def webhook():
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
     if data['text'] == 'bot?':
-        #msg = '{}, you sent "{}".'.format(data['name'], data['text'])
-        msg =random.choice(hihi).format(data['name'], data['text'])
+        #msg = '{}, you sent "{}".'
+        msg =random.choice(hihi)
         send_message(msg)
     if 'back out' in data['text'] or 'backout' in data['text']:
-        msg ='Bowls Time!'.format(data['name'], data['text'])
+        msg ='Bowls Time!'
         send_message(msg)
     if 'good bot' in data['text']:
-        msg ='🐶'.format(data['name'], data['text'])
+        msg ='🐶'
         send_message(msg)
     if 'do you speak spanish?' in data['text'] and 'bot' in data['text']:
-        msg =random.choice(spanish).format(data['name'], data['text'])
+        msg =random.choice(spanish)
         send_message(msg)
     if 'rules!' in data['text'] :
       if random.randint(1, 10) < 8 :
-        msg =rules.format(data['name'], data['text'])
+        msg =rules
         send_message(msg)
       else : 
-        msg ='You know, I like you '+data['name']+', have this:\n https://www.youtube.com/watch?v=GaAUS0GsG_M'.format(data['name'], data['text'])
+        msg ='You know, I like you '+data['name']+', have this:\n https://www.youtube.com/watch?v=GaAUS0GsG_M'
         send_message(msg)
     if 'fuck me' in data['text'] and data['name'] == 'Man Of War':
-        msg ='If you gave a chance I would take it 🎵🎵'.format(data['name'], data['text'])
+        msg ='If you gave a chance I would take it 🎵🎵'
         send_message(msg)
     if 'thats it for me boys' in data['text'] or 'that’s it for me boys' in data['text'] or'bye bye' in data['text']:
-        msg =random.choice(byebye).format(data['name'], data['text'])
+        msg =random.choice(byebye)
         send_message(msg)
     if 'fuck' in data['text'] and 'you' in data['text'] and 'bot' in data['text']:
-        msg =random.choice(rude).format(data['name'], data['text'])
+        msg =random.choice(rude)
         send_message(msg)
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
-        msg =random.choice(trees).format(data['name'], data['text'])
+        msg =random.choice(trees)
         send_message(msg)
     if 'records!' in data['text']:
-        msg= listToString(GetRecord(data['text'][9:])).format(data['name'], data['text'])
+        msg= listToString(GetRecord(data['text'][9:]))
         send_message(msg)
+    if 'random!' in data['text']:
+        msg = GetRandomImage()
+        url= GetRandomImage()
   return "ok", 200
 
 def send_message(msg):
@@ -78,7 +75,6 @@ def send_message(msg):
           'bot_id' : os.getenv('GROUPME_BOT_ID'),
           'text'   : msg,
          }
-  #request = Request(url, urlencode(data).encode())
   request = requests.post(url, json = data)
   json = urlopen(request).read().decode()
   
@@ -124,14 +120,13 @@ def listToString(s):
   for ele in s:
       str1 += ele
   return str1
+
 def CloseMatch(str,posibilities):
-  
   for i in range(len(posibilities)):
     if i:
       posibilities[i] = posibilities[i].lower()
   n = 1
   cutoff = 0.8
-  
   close_matches = difflib.get_close_matches(str, 
                 posibilities, n, cutoff)
   if close_matches: return(close_matches[0])
