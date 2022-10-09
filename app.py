@@ -134,4 +134,4 @@ def CloseMatch(str,posibilities):
   
   close_matches = difflib.get_close_matches(str, 
                 posibilities, n, cutoff)
-  return(close_matches[1])
+  return(close_matches[0])
