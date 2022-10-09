@@ -100,7 +100,7 @@ def GetRecord(mapa):
           ListaMapas.append(item)
   seleccion=CloseMatch(mapa,ListaMapas)
   ListaGameModes = []
-  for sublist in sheet.get("C:C"):
+  for sublist in sheet.get("B:B"):
       for item in sublist:
           ListaGameModes.append(item)
   if seleccion:
