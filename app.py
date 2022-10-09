@@ -68,7 +68,7 @@ def webhook():
         msg =random.choice(trees).format(data['name'], data['text'])
         send_message(msg)
     if 'records!' in data['text']:
-        msg= listToString(ObtenerHoja(data['text'][9:])).format(data['name'], data['text'])
+        msg= listToString(GetRecord(data['text'][9:])).format(data['name'], data['text'])
         send_message(msg)
   return "ok", 200
 
@@ -86,42 +86,43 @@ def log(msg):
   print(str(msg))
   sys.stdout.flush()
 
-def ObtenerHoja(mapa):
+def GetRecord(mapa):
   scope = ['https://spreadsheets.google.com/feeds',
            'https://www.googleapis.com/auth/drive']
   creds = ServiceAccountCredentials.from_json_keyfile_name(
       'client_secret.json', scope)
   client = gspread.authorize(creds)
   sheet = client.open("Trees in space game Records").sheet1
-
-
-  # Extract and print all of the values
   list_of_hashes = sheet.get("B:D")
-  flat_list = []
+  ListaMapas = []
   for sublist in sheet.get("C:C"):
       for item in sublist:
-          flat_list.append(item)
-  seleccion=CloseMatch(mapa,flat_list)
+          ListaMapas.append(item)
+  seleccion=CloseMatch(mapa,ListaMapas)
+  ListaGameModes = []
+  for sublist in sheet.get("C:C"):
+      for item in sublist:
+          ListaGameModes.append(item)
   if seleccion:
-    output="These are the records for " +seleccion[0]+ " \n "
+    output="These are the records for MAP " +seleccion+" \n "
     for x in list_of_hashes:
         if x:
-            if x[1].lower() == seleccion[0]:
+            if x[1].lower() == seleccion:
                 output+= x[0]+" "+ x[2]+"\n "
+  elif CloseMatch(mapa,ListaGameModes):
+    output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
+    for x in list_of_hashes:
+        if x:
+            if x[1].lower() == CloseMatch(mapa,ListaGameModes):
+                output+= x[1]+" "+ x[2]+"\n "
   else:
-      output = "Yeah, dude, I dont see that one on the Big team maps records"
+    output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
   return output
 
 def listToString(s):
- 
-  # initialize an empty string
   str1 = ""
-
-  # traverse in the string
   for ele in s:
       str1 += ele
-
-  # return string
   return str1
 def CloseMatch(str,posibilities):
   
@@ -133,4 +134,4 @@ def CloseMatch(str,posibilities):
   
   close_matches = difflib.get_close_matches(str, 
                 posibilities, n, cutoff)
-  return(close_matches)
+  return(close_matches[1])
