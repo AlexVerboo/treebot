@@ -135,4 +135,4 @@ def GetRandomImage():
   imagepick = random.randrange(0,9260)
   imagepick = str(imagepick)
   imageurl= sheet.acell('A'+imagepick).value
-  send_image("Picking Random Image No"+imagepick, imageurl)
+  send_image("Picking Random Image  No"+imagepick+" from Trees in Spaces Archive", imageurl)
