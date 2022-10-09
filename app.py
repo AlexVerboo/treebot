@@ -50,7 +50,6 @@ def webhook():
     if 'records!' in data['text']:
         send_message(listToString(GetRecord(data['text'][9:])))
     if 'random!' in data['text']:
-        send_image(GetRandomImage())
         GetRandomImage()
   return "ok", 200
 
@@ -136,4 +135,4 @@ def GetRandomImage():
   imagepick = random.randrange(0,9260)
   imagepick = str(imagepick)
   imageurl= sheet.acell('A'+imagepick).value
-  return ("Picking Random Image No"+imagepick, imageurl)
+  send_image("Picking Random Image No"+imagepick, imageurl)
