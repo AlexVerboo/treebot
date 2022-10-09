@@ -50,6 +50,7 @@ def webhook():
     if 'records!' in data['text']:
         send_message(listToString(GetRecord(data['text'][9:])))
     if 'random!' in data['text']:
+        send_image(GetRandomImage())
         GetRandomImage()
   return "ok", 200
 
