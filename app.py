@@ -21,8 +21,8 @@ def webhook():
   #creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
   #client = gspread.authorize(creds)
   #sheet = client.open("Trees in space game Records").sheet1
-  #list_of_hashes = sheet.get_all_records()
-  #print(list_of_hashes)
+  #MatrizRecords = sheet.get_all_records()
+  #print(MatrizRecords)
   data = request.get_json()
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
@@ -93,7 +93,7 @@ def GetRecord(mapa):
       'client_secret.json', scope)
   client = gspread.authorize(creds)
   sheet = client.open("Trees in space game Records").sheet1
-  list_of_hashes = sheet.get("B:D")
+  MatrizRecords = sheet.get("B:D")
   ListaMapas = []
   for sublist in sheet.get("C:C"):
       for item in sublist:
@@ -105,13 +105,13 @@ def GetRecord(mapa):
           ListaGameModes.append(item)
   if seleccion:
     output="These are the records for MAP " +seleccion+" \n "
-    for x in list_of_hashes:
+    for x in MatrizRecords:
         if x:
             if x[1].lower() == seleccion:
                 output+= x[0]+" "+ x[2]+"\n "
   elif CloseMatch(mapa,ListaGameModes):
     output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
-    for x in list_of_hashes:
+    for x in MatrizRecords:
         if x:
             if x[1].lower() == CloseMatch(mapa,ListaGameModes):
                 output+= x[1]+" "+ x[2]+"\n "
@@ -134,4 +134,5 @@ def CloseMatch(str,posibilities):
   
   close_matches = difflib.get_close_matches(str, 
                 posibilities, n, cutoff)
-  return(close_matches[0])
+  if close_matches[0]: return(close_matches[0])
+  else: return(close_matches)
