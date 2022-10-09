@@ -29,19 +29,10 @@ def webhook():
   trees =  ["IntangibleFancy","Andrew Says Ni, and some times says, hell no!! 🔫🔫","S O Tyrik","BattlebornValor","Dark Samurai112","TheDuDEwithAGuN if we ever see him playing","Hmmvvee98, S7 sniper here ❎","Hidan while cursing on spanish","K00PA00","Burrito, whenever he is not a simp with Kama","JRush77, you know how they say men are killers but gay people slay! ","Nut but after bowls time","snakemagic, He's got the reptile yuyu 🐍🧙","Man Of War, Set the defense, with a Hammer please 💢🔨","Kama At Me Bro, or Sister","WalkingWuhan","Sinova"]
   # We don't want to reply to ourselves!
   if data['name'] != 'Wild Palm Tree':
-    if data['text'] == 'bot?':
-        #msg = '{}, you sent "{}".'
-        msg =random.choice(hihi)
-        send_message(msg)
-    if 'back out' in data['text'] or 'backout' in data['text']:
-        msg ='Bowls Time!'
-        send_message(msg)
-    if 'good bot' in data['text']:
-        msg ='🐶'
-        send_message(msg)
-    if 'do you speak spanish?' in data['text'] and 'bot' in data['text']:
-        msg =random.choice(spanish)
-        send_message(msg)
+    if data['text'] == 'bot?': send_message(random.choice(hihi))
+    if 'back out' in data['text'] or 'backout' in data['text']: send_message('Bowls Time!')
+    if 'good bot' in data['text']: send_message('🐶')
+    if 'do you speak spanish?' in data['text'] and 'bot' in data['text']: send_message(random.choice(spanish))
     if 'rules!' in data['text'] :
       if random.randint(1, 10) < 8 :
         msg =rules
@@ -49,24 +40,17 @@ def webhook():
       else : 
         msg ='You know, I like you '+data['name']+', have this:\n https://www.youtube.com/watch?v=GaAUS0GsG_M'
         send_message(msg)
-    if 'fuck me' in data['text'] and data['name'] == 'Man Of War':
-        msg ='If you gave a chance I would take it 🎵🎵'
-        send_message(msg)
+    if 'fuck me' in data['text'] and data['name'] == 'Man Of War': send_message('If you gave a chance I would take it 🎵🎵')
     if 'thats it for me boys' in data['text'] or 'that’s it for me boys' in data['text'] or'bye bye' in data['text']:
-        msg =random.choice(byebye)
-        send_message(msg)
+      send_message(random.choice(byebye))
     if 'fuck' in data['text'] and 'you' in data['text'] and 'bot' in data['text']:
-        msg =random.choice(rude)
-        send_message(msg)
+        send_message(random.choice(rude))
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
-        msg =random.choice(trees)
-        send_message(msg)
+        send_message(random.choice(trees))
     if 'records!' in data['text']:
-        msg= listToString(GetRecord(data['text'][9:]))
-        send_message(msg)
+        send_message(listToString(GetRecord(data['text'][9:])))
     if 'random!' in data['text']:
-        msg = GetRandomImage()
-        url= GetRandomImage()
+        GetRandomImage()
   return "ok", 200
 
 def send_message(msg):
@@ -77,11 +61,23 @@ def send_message(msg):
          }
   request = requests.post(url, json = data)
   json = urlopen(request).read().decode()
-  
+def send_image(msg,imageurl):
+  url  = 'https://api.groupme.com/v3/bots/post'
+  data = {
+          "bot_id"  : os.getenv('GROUPME_BOT_ID'),
+          "text"    :  msg,
+          "attachments" : [
+            {
+              "type"  : "image",
+              "url"   : imageurl
+            }
+          ]
+        }
+  request = requests.post(url, json = data)
+  json = urlopen(request).read().decode()  
 def log(msg):
   print(str(msg))
   sys.stdout.flush()
-
 def GetRecord(mapa):
   scope = ['https://spreadsheets.google.com/feeds',
            'https://www.googleapis.com/auth/drive']
@@ -114,13 +110,11 @@ def GetRecord(mapa):
   else:
     output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
   return output
-
 def listToString(s):
   str1 = ""
   for ele in s:
       str1 += ele
   return str1
-
 def CloseMatch(str,posibilities):
   for i in range(len(posibilities)):
     if i:
@@ -131,3 +125,13 @@ def CloseMatch(str,posibilities):
                 posibilities, n, cutoff)
   if close_matches: return(close_matches[0])
   else: return(close_matches)
+def GetRandomImage():
+  scope = ['https://spreadsheets.google.com/feeds',
+         'https://www.googleapis.com/auth/drive']
+  creds = ServiceAccountCredentials.from_json_keyfile_name(
+    'client_secret.json', scope)
+  client = gspread.authorize(creds)
+  sheet = client.open("Trees in space game Records").worksheet('Images')
+  imagepick = random.randrange(0,9260)
+  imageurl= sheet.acell('A'+imagepick).value
+  return ("Picking Random Image No"+imagepick, imageurl)

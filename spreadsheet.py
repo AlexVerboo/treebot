@@ -6,7 +6,7 @@ scope = ['https://spreadsheets.google.com/feeds',
 creds = ServiceAccountCredentials.from_json_keyfile_name(
     'client_secret.json', scope)
 client = gspread.authorize(creds)
-sheet = client.open("Trees in space game Records").sheet1
+sheet = client.open("Trees in space game Records").worksheet('Images')
 def listToString(s):
   str1 = ""
   for ele in s:
@@ -26,7 +26,6 @@ def ObtenerHoja(mapa):
           if x[1].lower() == mapa:
               output+= x[0]+" "+ x[2]+"\n "
   print(sheet.get("B:B"))
-
 def CloseMatch(str,posibilities):
     for i in range(len(posibilities)):
         if i:
@@ -38,13 +37,15 @@ def CloseMatch(str,posibilities):
 
     return(close_matches)
 
-possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
-comando = "records! deaDlock"
-mapa= comando[9:]
-flat_list = []
-for sublist in sheet.get("C:C"):
-    for item in sublist:
-        flat_list.append(item)
-seleccion=CloseMatch(mapa,flat_list)
-print (seleccion)
-print (sheet.get("A:D"))
+#possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
+#comando = "records! deaDlock"
+#mapa= comando[9:]
+#flat_list = []
+#for sublist in sheet.get("C:C"):
+#    for item in sublist:
+#        flat_list.append(item)
+#seleccion=CloseMatch(mapa,flat_list)
+#print (seleccion)
+#print (sheet.get("A:D"))
+
+print(sheet.acell('A1').value)
