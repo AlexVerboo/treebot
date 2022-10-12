@@ -154,6 +154,6 @@ def PersonalRecords(nombre):
         if x[0]==usergamertag:
             output +="These are the stats for " +nombre+"\n"
             for y in range(len(x)):
-                output +=  statsmatiz[0][y]+ " 🡺  "+x[y]+"\n"
+                output +=  statsmatiz[0][y]+ " ➡️   "+x[y]+"\n"
   else:  output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
   return (output)
