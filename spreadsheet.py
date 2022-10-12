@@ -47,5 +47,27 @@ def CloseMatch(str,posibilities):
 #seleccion=CloseMatch(mapa,flat_list)
 #print (seleccion)
 #print (sheet.get("A:D"))
+def FlatList(List):
+    flatlist = []
+    for sublist in List:
+      for item in sublist:
+          flatlist.append(item)
+    return(flatlist)
+def PersonalRecords(nombre):
+    usergamertag =""
+    output=""
+    gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C21:D35")
+    for x in gamertags:
+        if x[1]==nombre:
+            usergamertag=x[0]
+    statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:H19")
+    for x in statsmatiz:
+        if x[0]==usergamertag:
+            output +="This are the stats for " +usergamertag+"\n"
+            for y in range(len(x)):
+                #output += x[y] + " =>  "+statsmatiz[0][y]+"\n"
+                output +=  statsmatiz[0][y]+ " =>  "+x[y]+"\n"
+    print(output)
+    return (usergamertag)
 
-print(sheet.acell('A1').value)
+print(PersonalRecords('Hidan'))

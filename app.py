@@ -51,6 +51,8 @@ def webhook():
         send_message(listToString(GetRecord(data['text'][9:])))
     if 'random!' in data['text']:
         GetRandomImage()
+    if 'mystats!' in data['text']:
+        send_message(PersonalRecords(data['name']))
   return "ok", 200
 
 def send_message(msg):
@@ -132,7 +134,26 @@ def GetRandomImage():
     'client_secret.json', scope)
   client = gspread.authorize(creds)
   sheet = client.open("Trees in space game Records").worksheet('Images')
-  imagepick = random.randrange(0,9260)
-  imagepick = str(imagepick)
+  imagepick = str(random.randrange(0,9260))
   imageurl= sheet.acell('A'+imagepick).value
   send_image("Picking Random Image  No"+imagepick+" from Trees in Spaces Archive", imageurl)
+def PersonalRecords(nombre):
+  scope = ['https://spreadsheets.google.com/feeds',
+  'https://www.googleapis.com/auth/drive']
+  creds = ServiceAccountCredentials.from_json_keyfile_name(
+   'client_secret.json', scope)
+  client = gspread.authorize(creds)
+  usergamertag =""
+  output=""
+  gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C21:D35")
+  for x in gamertags:
+      if x[1]==nombre:
+          usergamertag=x[0]
+  statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:H19")
+  for x in statsmatiz:
+      if x[0]==usergamertag:
+          output +="This are the stats for " +usergamertag+"\n"
+          for y in range(len(x)):
+              output +=  statsmatiz[0][y]+ " =>  "+x[y]+"\n"
+  if output=="" : output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
+  return (output)
