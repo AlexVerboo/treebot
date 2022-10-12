@@ -144,6 +144,7 @@ def PersonalRecords(nombre):
    'client_secret.json', scope)
   client = gspread.authorize(creds)
   output=""
+  usergamertag =""
   gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C21:D35")
   for x in gamertags:
       if x[1]==nombre:
