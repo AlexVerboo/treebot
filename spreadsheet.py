@@ -60,14 +60,14 @@ def PersonalRecords(nombre):
     for x in gamertags:
         if x[1]==nombre:
             usergamertag=x[0]
-    statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:H19")
-    for x in statsmatiz:
-        if x[0]==usergamertag:
-            output +="This are the stats for " +usergamertag+"\n"
-            for y in range(len(x)):
-                #output += x[y] + " =>  "+statsmatiz[0][y]+"\n"
-                output +=  statsmatiz[0][y]+ " =>  "+x[y]+"\n"
-    print(output)
-    return (usergamertag)
+    if usergamertag:
+        statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:H19")
+        for x in statsmatiz:
+            if x[0]==usergamertag:
+                output +="This are the stats for " +usergamertag+"\n"
+                for y in range(len(x)):
+                    output +=  statsmatiz[0][y]+ " =>  "+x[y]+"\n"
+    else: output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
+    return (output)
 
 print(PersonalRecords('Hidan'))
