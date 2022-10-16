@@ -18,6 +18,7 @@ def hello():
 
 def webhook():
   data = request.get_json()
+  originaldata=data['text']
   data['text'] = data['text'].lower()
   log('Recieved {}'.format(data))
   time.sleep( 1 )
@@ -53,8 +54,8 @@ def webhook():
         GetRandomImage()
     if 'mystats!' in data['text']:
         send_message(PersonalRecords(data['name']))
-    if 'changed name' in data['text'] and data['name'] == 'GroupMe':
-        send_message(updatename(data['text']))
+    if 'changed name' in originaldata and data['name'] == 'GroupMe':
+        send_message(updatename(originaldata))
   return "ok", 200
 
 def send_message(msg):
