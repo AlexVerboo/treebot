@@ -1,3 +1,4 @@
+from inspect import getsource
 import gspread
 import difflib
 from oauth2client.service_account import ServiceAccountCredentials
@@ -36,7 +37,7 @@ def CloseMatch(str,posibilities):
                   posibilities, n, cutoff)
 
     return(close_matches)
-
+data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'GroupMe', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'dudewithagun changed name to dudewithagunhidanaskedmetochangemyname', 'user_id': '0'}
 #possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
 #comando = "records! deaDlock"
 #mapa= comando[9:]
@@ -70,5 +71,20 @@ def PersonalRecords(nombre):
                     output +=  statsmatiz[0][y]+ " =>  "+x[y]+"\n"
     else: output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
     return (output)
-
-print(PersonalRecords('Hidan'))
+def lastWord(string):
+    # split by space and converting
+    # string to list and
+    lis = list(string.split(" "))
+    # length of list
+    length = len(lis)
+    # returning last element in list
+    return lis[length-1]
+def updatename(string):
+    sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
+    groupmenames=sheet.get("AB:AB")
+    for x in range(len(groupmenames)):
+        if groupmenames[x][0] == string.split()[0]: 
+            print ('I will update AB'+ str(x+1))
+            cell=str(x+1)
+            sheet.update('AB'+cell,lastWord(string))
+updatename(data['text'])

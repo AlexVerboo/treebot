@@ -53,6 +53,8 @@ def webhook():
         GetRandomImage()
     if 'mystats!' in data['text']:
         send_message(PersonalRecords(data['name']))
+    if 'changed name' in data['text'] and data['name'] == 'GroupMe':
+        send_message(updatename(data['text']))
   return "ok", 200
 
 def send_message(msg):
@@ -158,3 +160,25 @@ def PersonalRecords(nombre):
                 output +=  statsmatiz[0][y]+ " ➡️   "+x[y]+"\n"
   else:  output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
   return (output)
+def lastWord(string):
+    # split by space and converting
+    # string to list and
+    lis = list(string.split(" "))
+    # length of list
+    length = len(lis)
+    # returning last element in list
+    return lis[length-1]
+def updatename(string):
+  scope = ['https://spreadsheets.google.com/feeds',
+         'https://www.googleapis.com/auth/drive']
+  creds = ServiceAccountCredentials.from_json_keyfile_name(
+    'client_secret.json', scope)
+  client = gspread.authorize(creds)
+  sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
+  groupmenames=sheet.get("AB:AB")
+  for x in range(len(groupmenames)):
+      if groupmenames[x][0] == string.split()[0]: 
+          outpout= 'I will update '+ string.split()[0]+' to '+lastWord(string)
+          sheet.update('AB'+str(x+1),lastWord(string))
+      if not output: output='For starters, I dont know who you are, you may want to add your name to the list'
+  return(output)
