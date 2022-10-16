@@ -56,8 +56,9 @@ def FlatList(List):
 def PersonalRecords(nombre):
     usergamertag =""
     output=""
-    gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("Z:AA")
+    gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("AA:AB")
     for x in gamertags:
+        print (x)
         if x[1]==nombre:
             usergamertag=x[0]      
     if usergamertag:
@@ -70,4 +71,4 @@ def PersonalRecords(nombre):
     else: output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
     return (output)
 
-print(PersonalRecords('Corpses Ashes'))
+print(PersonalRecords('Hidan'))
