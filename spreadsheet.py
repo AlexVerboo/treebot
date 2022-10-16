@@ -37,7 +37,7 @@ def CloseMatch(str,posibilities):
                   posibilities, n, cutoff)
 
     return(close_matches)
-data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'GroupMe', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'Hidan changed name to UNHidan', 'user_id': '0'}
+data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'GroupMe', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'NewHidan changed name to OldHidan', 'user_id': '0'}
 #possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
 #comando = "records! deaDlock"
 #mapa= comando[9:]
