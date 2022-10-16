@@ -184,4 +184,4 @@ def updatename(string):
       outpout= 'I will update '+ string.split()[0]+' to '+lastWord(string)
       sheet.update('AB'+cell,lastWord(string))
   else:outpout='For starters, I dont know who you are, you may want to add your name to the list'
-  return(output)
+  return(outpout)
