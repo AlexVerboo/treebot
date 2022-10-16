@@ -176,9 +176,12 @@ def updatename(string):
   client = gspread.authorize(creds)
   sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
   groupmenames=sheet.get("AB:AB")
+  cell=''
   for x in range(len(groupmenames)):
       if groupmenames[x][0] == string.split()[0]: 
-          outpout= 'I will update '+ string.split()[0]+' to '+lastWord(string)
-          sheet.update('AB'+str(x+1),lastWord(string))
-      if not output: output='For starters, I dont know who you are, you may want to add your name to the list'
+          cell=str(x+1)
+  if cell:
+      outpout= 'I will update '+ string.split()[0]+' to '+lastWord(string)
+      sheet.update('AB'+cell,lastWord(string))
+  else:outpout='For starters, I dont know who you are, you may want to add your name to the list'
   return(output)

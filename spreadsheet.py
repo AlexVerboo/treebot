@@ -37,7 +37,7 @@ def CloseMatch(str,posibilities):
                   posibilities, n, cutoff)
 
     return(close_matches)
-data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'GroupMe', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'dudewithagun changed name to dudewithagunhidanaskedmetochangemyname', 'user_id': '0'}
+data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'GroupMe', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'Hidan changed name to UNHidan', 'user_id': '0'}
 #possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
 #comando = "records! deaDlock"
 #mapa= comando[9:]
@@ -82,9 +82,13 @@ def lastWord(string):
 def updatename(string):
     sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
     groupmenames=sheet.get("AB:AB")
+    cell=''
     for x in range(len(groupmenames)):
         if groupmenames[x][0] == string.split()[0]: 
-            print ('I will update AB'+ str(x+1))
             cell=str(x+1)
-            sheet.update('AB'+cell,lastWord(string))
-updatename(data['text'])
+    if cell:
+        outpout= 'I will update '+ string.split()[0]+' to '+lastWord(string)
+        sheet.update('AB'+cell,lastWord(string))
+    else:outpout='For starters, I dont know who you are, you may want to add your name to the list'
+    return(outpout)
+print(updatename(data['text']))
