@@ -37,7 +37,7 @@ def CloseMatch(str,posibilities):
                   posibilities, n, cutoff)
 
     return(close_matches)
-data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'GroupMe', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'NewHidan changed name to OldHidan', 'user_id': '0'}
+data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'Hidan', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'OldHidan changed name to OldHidan', 'user_id': '0'}
 #possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
 #comando = "records! deaDlock"
 #mapa= comando[9:]
@@ -91,4 +91,16 @@ def updatename(string):
         sheet.update('AB'+cell,lastWord(string))
     else:outpout='For starters, I dont know who you are, you may want to add your name to the list'
     return(outpout)
-print(updatename(data['text']))
+
+def GetID(string,string2):
+    sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
+    groupmenames=sheet.get("AB:AB")
+    cell=''
+    for x in range(len(groupmenames)):
+        if groupmenames[x][0] == string: 
+            cell=str(x+1)
+    if cell:
+        #sheet.update('AC'+cell,string2)
+        print('AC'+cell)
+        print(string2)
+GetID(data['name'],data['id'])
