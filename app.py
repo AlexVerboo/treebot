@@ -29,7 +29,7 @@ def webhook():
   spanish = ["Si", "Sometimes","Yeah, turns out my father is Mexican, Can You belive it? I guess not everyone is going up the border after all", "Yes but please dont tell ICE","Yes sir, I can order TexMex the right way","👍 🤠"]
   trees =  ["IntangibleFancy","Andrew Says Ni, and some times says, hell no!! 🔫🔫","S O Tyrik","BattlebornValor","Dark Samurai112","TheDuDEwithAGuN if we ever see him playing","Hmmvvee98, S7 sniper here ❎","Hidan while cursing on spanish","K00PA00","Burrito, whenever he is not a simp with Kama","JRush77, you know how they say men are killers but gay people slay! ","Nut but after bowls time","snakemagic, He's got the reptile yuyu 🐍🧙","Man Of War, Set the defense, with a Hammer please 💢🔨","Kama At Me Bro, or Sister","WalkingWuhan","Sinova"]
   # We don't want to reply to ourselves!
-  GetID(data['name'],data['user_id'])
+  #GetID(data['name'],data['user_id'])
   if data['name'] != 'Wild Palm Tree':
     if data['text'] == 'bot?': send_message(random.choice(hihi))
     if 'back out' in data['text'] or 'backout' in data['text']: send_message('Bowls Time!')
