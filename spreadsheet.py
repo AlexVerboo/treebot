@@ -100,7 +100,9 @@ def GetID(string,string2):
         if groupmenames[x][0] == string: 
             cell=str(x+1)
     if cell:
-        #sheet.update('AC'+cell,string2)
-        print('AC'+cell)
-        print(string2)
-GetID(data['name'],data['id'])
+        sheet.update('AC'+cell,string2)
+def tagall():
+    sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
+    groupmenames=FlatList(sheet.get("AC:AC"))
+    print(groupmenames)
+tagall()

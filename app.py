@@ -58,7 +58,7 @@ def webhook():
     if 'changed name' in originaldata and data['name'] == 'GroupMe':
         send_message(updatename(originaldata))
     if data['text']== '@all':
-      tagall('This is a test tag')
+      tagall('Calling All Trees',allids())
   return "ok", 200
 
 def send_message(msg):
@@ -83,7 +83,7 @@ def send_image(msg,imageurl):
         }
   request = requests.post(url, json = data)
   json = urlopen(request).read().decode()
-def tagall(msg):
+def tagall(msg,ids):
   url  = 'https://api.groupme.com/v3/bots/post'
   data = {
           "bot_id"  : os.getenv('GROUPME_BOT_ID'),
@@ -91,7 +91,7 @@ def tagall(msg):
           "attachments" : [
              {
             	"type": "mentions",
-            	"user_ids": ["62846108","96917940"],
+            	"user_ids": ids,
             	"loci": []
             }
           ]
@@ -217,3 +217,14 @@ def GetID(string,string2):
           cell=str(x+1)
   if cell:
       sheet.update('AC'+cell,string2)
+def FlatList(List):
+    flatlist = []
+    for sublist in List:
+      for item in sublist:
+          flatlist.append(item)
+    return(flatlist)
+def allids():
+  creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json',['https://spreadsheets.google.com/feeds','https://www.googleapis.com/auth/drive'])
+  client = gspread.authorize(creds)
+  sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
+  return(FlatList(sheet.get("AC:AC")))
