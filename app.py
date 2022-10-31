@@ -57,6 +57,8 @@ def webhook():
         send_message(PersonalRecords(data['name']))
     if 'changed name' in originaldata and data['name'] == 'GroupMe':
         send_message(updatename(originaldata))
+    if data['text']== '@all':
+      tagall('This is a test tag')
   return "ok", 200
 
 def send_message(msg):
@@ -80,7 +82,22 @@ def send_image(msg,imageurl):
           ]
         }
   request = requests.post(url, json = data)
-  json = urlopen(request).read().decode()  
+  json = urlopen(request).read().decode()
+def tagall(msg):
+  url  = 'https://api.groupme.com/v3/bots/post'
+  data = {
+          "bot_id"  : os.getenv('GROUPME_BOT_ID'),
+          "text"    :  msg,
+          "attachments" : [
+             {
+            	"type": "mentions",
+            	"user_ids": ["62846108"],
+            	"loci": []
+            }
+          ]
+        }
+  request = requests.post(url, json = data)
+  json = urlopen(request).read().decode()
 def log(msg):
   print(str(msg))
   sys.stdout.flush()
