@@ -15,7 +15,6 @@ app = Flask(__name__)
 def hello():
     return "Trees in Space!", 200
 @app.route('/', methods=['POST'])
-
 def webhook():
   data = request.get_json()
   originaldata=data['text']
@@ -57,8 +56,8 @@ def webhook():
         send_message(PersonalRecords(data['name']))
     if 'changed name' in originaldata and data['name'] == 'GroupMe':
         send_message(updatename(originaldata))
-    if '@all' in data['text']:
-      tagall('Calling All Trees',allids())
+  #  if '@all' in data['text']:
+   #   tagall('Calling All Trees',allids())
   return "ok", 200
 
 def send_message(msg):
