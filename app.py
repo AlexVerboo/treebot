@@ -91,7 +91,7 @@ def tagall(msg):
           "attachments" : [
              {
             	"type": "mentions",
-            	"user_ids": ["62846108"],
+            	"user_ids": ["62846108","96917940"],
             	"loci": []
             }
           ]
