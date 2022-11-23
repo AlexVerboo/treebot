@@ -193,14 +193,14 @@ def updatename(string):
     'client_secret.json', scope)
   client = gspread.authorize(creds)
   sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
-  groupmenames=sheet.get("AB:AB")
+  groupmenames=sheet.get("AC:AC")
   cell=''
   for x in range(len(groupmenames)):
       if groupmenames[x][0] == string.split()[0]: 
           cell=str(x+1)
   if cell:
       outpout= 'I will update '+ string.split()[0]+' to '+lastWord(string)
-      sheet.update('AB'+cell,lastWord(string))
+      sheet.update('AC'+cell,lastWord(string))
   else:outpout='For starters, I dont know who you are, you may want to add your name to the list'
   return(outpout)
 def GetID(string,string2):
@@ -209,13 +209,13 @@ def GetID(string,string2):
   creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
   client = gspread.authorize(creds)
   sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
-  groupmenames=sheet.get("AB:AB")
+  groupmenames=sheet.get("AC:AC")
   cell=''
   for x in range(len(groupmenames)):
       if groupmenames[x][0] == string: 
           cell=str(x+1)
   if cell:
-      sheet.update('AC'+cell,string2)
+      sheet.update('AD'+cell,string2)
 def FlatList(List):
     flatlist = []
     for sublist in List:
