@@ -165,7 +165,7 @@ def PersonalRecords(nombre):
   client = gspread.authorize(creds)
   output=""
   usergamertag =""
-  gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("AA:AB")
+  gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("AB:AC")
   for x in gamertags:
       if x[1]==nombre:
           usergamertag=x[0]
