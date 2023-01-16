@@ -1,5 +1,4 @@
 import os
-import urllib3
 import sys
 import requests
 import random
@@ -67,13 +66,14 @@ def send_message(msg):
           'bot_id' : os.getenv('GROUPME_BOT_ID'),
           'text'   : msg,
          }
-  #request = requests.post(url, json = data)
-  #json = urlopen(request).read().decode()
-  request = Request(url, urlencode(data).encode())
+  request = requests.post(url, json = data)
   json = urlopen(request).read().decode()
+  #request = Request(url, urlencode(data).encode())
+  #json = urlopen(request).read().decode()
 
 def send_image(msg,imageurl):
   url  = 'https://api.groupme.com/v3/bots/post'
+  log(os.getenv('GROUPME_BOT_ID'))
   data = {
           "bot_id"  : os.getenv('GROUPME_BOT_ID'),
           "text"    :  msg,
