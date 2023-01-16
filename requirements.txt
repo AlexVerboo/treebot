@@ -7,3 +7,4 @@ Pillow==5.0.0
 GroupyAPI==0.10.3
 apscheduler==3.6.1
 oauthlib==3.0.1
+urllib3==1.26.14
