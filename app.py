@@ -68,9 +68,6 @@ def send_message(msg):
          }
   request = requests.post(url, json = data)
   json = urlopen(request).read().decode()
-  #request = Request(url, urlencode(data).encode())
-  #json = urlopen(request).read().decode()
-
 def send_image(msg,imageurl):
   url  = 'https://api.groupme.com/v3/bots/post'
   log(os.getenv('GROUPME_BOT_ID'))
@@ -110,8 +107,8 @@ def GetRecord(mapa):
   creds = ServiceAccountCredentials.from_json_keyfile_name(
       'client_secret.json', scope)
   client = gspread.authorize(creds)
-  sheet = client.open("Trees in space game Records").sheet1
-  MatrizRecords = sheet.get("B:D")
+  sheet = client.open("Trees in space game Records").worksheet('Best Times')
+  MatrizRecords = sheet.get("A:D")
   ListaMapas = []
   for sublist in sheet.get("C:C"):
       for item in sublist:
@@ -126,13 +123,13 @@ def GetRecord(mapa):
     for x in MatrizRecords:
         if x:
             if x[1].lower() == seleccion:
-                output+= x[0]+" "+ x[2]+"\n "
+                output+= x[0]+" "+x[1]+" "+ x[3]+"\n "
   elif CloseMatch(mapa,ListaGameModes):
     output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
     for x in MatrizRecords:
         if x:
             if x[0].lower() == CloseMatch(mapa,ListaGameModes):
-                output+= x[1]+" "+ x[2]+"\n "
+                output+= x[0]+" "+x[2]+" "+ x[3]+"\n "
   else:
     output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
   return output

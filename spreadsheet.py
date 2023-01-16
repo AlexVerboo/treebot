@@ -2,6 +2,7 @@ from inspect import getsource
 import gspread
 import difflib
 from oauth2client.service_account import ServiceAccountCredentials
+
 scope = ['https://spreadsheets.google.com/feeds',
          'https://www.googleapis.com/auth/drive']
 creds = ServiceAccountCredentials.from_json_keyfile_name(
@@ -11,7 +12,7 @@ sheet = client.open("Trees in space game Records").worksheet('Images')
 def listToString(s):
   str1 = ""
   for ele in s:
-      str1 += ele +" "
+      str1 += ele
   return str1
 def ObtenerHoja(mapa):
   scope = ['https://spreadsheets.google.com/feeds',
@@ -37,7 +38,8 @@ def CloseMatch(str,posibilities):
                   posibilities, n, cutoff)
 
     return(close_matches)
-data= {'attachments': [], 'avatar_url': None, 'created_at': 1665942450, 'group_id': '18341291', 'id': '166594245014720944', 'name': 'Hidan', 'sender_id': 'system', 'sender_type': 'system', 'source_guid': '879297202fa8013b377c625eb7081970', 'system': True, 'text': 'OldHidan changed name to OldHidan', 'user_id': '0'}
+data= {'attachments': [], 'avatar_url': 'https://i.groupme.com/500x500.jpeg.ba080d68abbe4da3b4f1d5927d6bc04e', 'created_at': 1673903869, 'group_id': '18341291', 'id': '167390386935244807', 'name': 'Hidan', 'sender_id': '96917940', 'sender_type': 'user', 'source_guid': 'f772ed5c-0e4b-431b-be4e-9f909fcdf9a4', 'system': False, 'text': 'records! breaker', 'user_id': '96917940'}
+data['text'] = data['text'].lower()
 #possibilities = ["breaker", "fragmentation", "highpower", "deathlock"]
 #comando = "records! deaDlock"
 #mapa= comando[9:]
@@ -105,4 +107,37 @@ def tagall():
     sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
     groupmenames=FlatList(sheet.get("AC:AC"))
     print(groupmenames)
-tagall()
+def GetRecord(mapa):
+  scope = ['https://spreadsheets.google.com/feeds',
+           'https://www.googleapis.com/auth/drive']
+  creds = ServiceAccountCredentials.from_json_keyfile_name(
+      'client_secret.json', scope)
+  client = gspread.authorize(creds)
+  sheet = client.open("Trees in space game Records").sheet1
+  MatrizRecords = sheet.get("B:D")
+  ListaMapas = []
+  for sublist in sheet.get("C:C"):
+      for item in sublist:
+          ListaMapas.append(item)
+  seleccion=CloseMatch(mapa,ListaMapas)
+  print(seleccion)
+  ListaGameModes = []
+  for sublist in sheet.get("B:B"):
+      for item in sublist:
+          ListaGameModes.append(item)
+  if seleccion:
+    output="These are the records for MAP " +seleccion[0]+" \n "
+    for x in MatrizRecords:
+        if x:
+            if x[1].lower() == seleccion:
+                output+= x[0]+" "+ x[2]+"\n "
+  elif CloseMatch(mapa,ListaGameModes):
+    output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
+    for x in MatrizRecords:
+        if x:
+            if x[0].lower() == CloseMatch(mapa,ListaGameModes):
+                output+= x[1]+" "+ x[2]+"\n "
+  else:
+    output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
+  return output
+print(listToString(GetRecord(data['text'][9:])))
