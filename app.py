@@ -123,13 +123,13 @@ def GetRecord(mapa):
     for x in MatrizRecords:
         if x:
             if x[2].lower() == seleccion:
-                output+= x[0]+" "+x[1]+" "+ x[3]+"\n "
+                output+= x[0]+"\t➡️\t"+x[1]+" "+ x[3]+"\n "
   elif CloseMatch(mapa,ListaGameModes):
     output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
     for x in MatrizRecords:
         if x:
             if x[1].lower() == CloseMatch(mapa,ListaGameModes):
-                output+= x[0]+" "+x[2]+" "+ x[3]+"\n "
+                output+= x[0]+"\t➡️\t"+x[2]+" "+ x[3]+"\n "
   else:
     output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
   return output
