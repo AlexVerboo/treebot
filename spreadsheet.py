@@ -140,4 +140,15 @@ def GetRecord(mapa):
   else:
     output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
   return output
-print(listToString(GetRecord(data['text'][9:])))
+def DaysOff():
+    scope = ['https://spreadsheets.google.com/feeds',
+           'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+      'client_secret.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("Trees in space game Records").worksheet('Unofficial Medals')
+    output=""
+    for item in FlatList(sheet.get("A:A")):
+        output +=item +"\n "
+    return output
+print (DaysOff())

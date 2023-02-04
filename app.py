@@ -56,6 +56,8 @@ def webhook():
         send_message(PersonalRecords(data['name']))
     if 'changed name' in originaldata and data['name'] == 'GroupMe':
         send_message(updatename(originaldata))
+    if 'daysoff!' in data['text'] :
+        send_message(DaysOff())
    #if '@all' in data['text']:
    #    tagall('Calling All Trees',allids())
   return "ok", 200
@@ -228,3 +230,14 @@ def allids():
   client = gspread.authorize(creds)
   sheet=client.open("Trees in space game Records").worksheet('Trees in Space Members')
   return(FlatList(sheet.get("AC:AC")))
+def DaysOff():
+    scope = ['https://spreadsheets.google.com/feeds',
+           'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+      'client_secret.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("Trees in space game Records").worksheet('Unofficial Medals')
+    output=""
+    for item in FlatList(sheet.get("A:A")):
+        output +=item +"\n "
+    return output
