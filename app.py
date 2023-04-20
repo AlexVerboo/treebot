@@ -173,7 +173,7 @@ def PersonalRecords(nombre):
       if x[1]==nombre:
           usergamertag=x[0]
   if usergamertag:
-    statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:I20")
+    statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:I30")
     for x in statsmatiz:
         if x[0]==usergamertag:
             output +="These are the stats for " +nombre+"\n"
