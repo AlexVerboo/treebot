@@ -45,7 +45,7 @@ def webhook():
     if 'thats it for me boys' in data['text'] or 'that’s it for me boys' in data['text'] or'bye bye' in data['text']:
       send_message(random.choice(byebye))
     if 'settings!' in data['text'] :
-      send_message('***SENSITIVITY AND ACCELERATION /look acceleration 3.5/look sensitivity horizontal 3.5/look sensitivity vertical 3.5/***TRIGGER DEADZONE/Left Inner DeadZone 0%/Left outer DeadZone 55%/Right inner DeadZone 0%/Right outer DeadZone 55%/***MOVE THUMSTICK/center Dedzone 1/Max Input threshold 0.0/Axial deadzone 0.0/***LOOK THUMSTICK/Center deadzone 0/Max Input threshold 0/Axial deadzone 0.0')
+      send_message('***SENSITIVITY AND ACCELERATION /nlook acceleration 3.5/nlook sensitivity horizontal 3.5/nlook sensitivity vertical 3.5/n***TRIGGER DEADZONE/nLeft Inner DeadZone 0%/nLeft outer DeadZone 55%/nRight inner DeadZone 0%/nRight outer DeadZone 55%/n***MOVE THUMSTICK/ncenter Dedzone 1/nMax Input threshold 0.0/nAxial deadzone 0.0/n***LOOK THUMSTICK/nCenter deadzone 0/nMax Input threshold 0/nAxial deadzone 0.0')
     if 'fuck' in data['text'] and 'you' in data['text'] and 'bot' in data['text']:
         send_message(random.choice(rude))
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
