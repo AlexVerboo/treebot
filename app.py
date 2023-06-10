@@ -11,6 +11,7 @@ from flask import Flask, request
 from selenium import webdriver
 from oauth2client.service_account import ServiceAccountCredentials
 app = Flask(__name__)
+ pip3 install requests
 @app.route("/", methods=['GET'])
 def hello():
     return "Trees in Space!", 200
@@ -55,7 +56,7 @@ def webhook():
     if 'random!' in data['text']:
         GetRandomImage()
     if 'mystats!' in data['text']:
-        send_message(PersonalRecords(data['name']))
+        send_message(PersonalRecords(data['sender_id']))
     if 'changed name' in originaldata and data['name'] == 'GroupMe':
         send_message(updatename(originaldata))
     if 'daysoff!' in data['text'] :
@@ -162,7 +163,7 @@ def GetRandomImage():
   imagepick = str(random.randrange(0,9260))
   imageurl= sheet.acell('A'+imagepick).value
   send_image("Picking Random Image  No"+imagepick+" from Trees in Spaces Archive", imageurl)
-def PersonalRecords(nombre):
+def PersonalRecords(id):
   scope = ['https://spreadsheets.google.com/feeds',
   'https://www.googleapis.com/auth/drive']
   creds = ServiceAccountCredentials.from_json_keyfile_name(
@@ -170,15 +171,15 @@ def PersonalRecords(nombre):
   client = gspread.authorize(creds)
   output=""
   usergamertag =""
-  gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("AB:AC")
+  gamertags =client.open("Trees in space game Records").worksheet('Trees in Space Members').get("AB:AD")
   for x in gamertags:
-      if x[1]==nombre:
+      if x[2]==id:
           usergamertag=x[0]
   if usergamertag:
     statsmatiz = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:I30")
     for x in statsmatiz:
         if x[0]==usergamertag:
-            output +="These are the stats for " +nombre+"\n"
+            output +="These are the stats for " +usergamertag+"\n"
             for y in range(len(x)):
                 output +=  statsmatiz[0][y]+ " ➡️   "+x[y]+"\n"
   else:  output+="I dont see your name on the Stats list. Tell my boss to update his shit....  NEXT!!!"
