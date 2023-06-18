@@ -170,7 +170,7 @@ def GetHeavyRecord(mapa):
             if x[1].lower() == CloseMatch(mapa,ListaGameModes):
                 output+= x[0]+"\t➡️\t"+x[2]+" "+ x[3]+"\n "
   else:
-    output = "Yeah, dude, I dont see that one on the Big team maps or Heavies GameMode"
+    output = "Yeah, dude, I dont see " +mapa+"  on the Big team maps or Heavies GameMode"
   return output
 def listToString(s):
   str1 = ""
