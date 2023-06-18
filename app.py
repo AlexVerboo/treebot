@@ -146,7 +146,7 @@ def GetHeavyRecord(mapa):
   creds = ServiceAccountCredentials.from_json_keyfile_name(
       'client_secret.json', scope)
   client = gspread.authorize(creds)
-  sheet = client.open("Trees in space game Records").worksheet('Heavies Records')
+  sheet = client.open("Trees in space game Records").worksheet('Heavies')
   MatrizRecords = sheet.get("A:D")
   ListaMapas = []
   for sublist in sheet.get("C:C"):
