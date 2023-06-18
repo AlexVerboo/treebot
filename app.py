@@ -52,7 +52,7 @@ def webhook():
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
         send_message(random.choice(trees))
     if 'heavyrecords!' in data['text']:
-        send_message(listToString(GetHeavyRecord(data['text'][9:])))
+        send_message(listToString(GetHeavyRecord(data['text'][14:])))
     if 'records!' in data['text']:
         send_message(listToString(GetRecord(data['text'][9:])))
     if 'random!' in data['text']:
@@ -158,13 +158,13 @@ def GetHeavyRecord(mapa):
       for item in sublist:
           ListaGameModes.append(item)
   if seleccion:
-    output="These are the records for MAP " +seleccion+" \n "
+    output="These are the records for MAP on BTB heavies" +seleccion+" on BTB heavies\n "
     for x in MatrizRecords:
         if x:
             if x[2].lower() == seleccion:
                 output+= x[0]+"\t➡️\t"+x[1]+" "+ x[3]+"\n "
   elif CloseMatch(mapa,ListaGameModes):
-    output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
+    output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" on BTB heavies  \n "
     for x in MatrizRecords:
         if x:
             if x[1].lower() == CloseMatch(mapa,ListaGameModes):
