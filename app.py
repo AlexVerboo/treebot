@@ -51,6 +51,8 @@ def webhook():
         send_message(random.choice(rude))
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
         send_message(random.choice(trees))
+    if 'heavyrecords!' in data['text']:
+        send_message(listToString(GetHeavyRecord(data['text'][9:])))
     if 'records!' in data['text']:
         send_message(listToString(GetRecord(data['text'][9:])))
     if 'random!' in data['text']:
@@ -137,6 +139,38 @@ def GetRecord(mapa):
                 output+= x[0]+"\t➡️\t"+x[2]+" "+ x[3]+"\n "
   else:
     output = "Yeah, dude, I dont see that one on the Big team maps or GameModes"
+  return output
+def GetHeavyRecord(mapa):
+  scope = ['https://spreadsheets.google.com/feeds',
+           'https://www.googleapis.com/auth/drive']
+  creds = ServiceAccountCredentials.from_json_keyfile_name(
+      'client_secret.json', scope)
+  client = gspread.authorize(creds)
+  sheet = client.open("Trees in space game Records").worksheet('Heavies Records')
+  MatrizRecords = sheet.get("A:D")
+  ListaMapas = []
+  for sublist in sheet.get("C:C"):
+      for item in sublist:
+          ListaMapas.append(item)
+  seleccion=CloseMatch(mapa,ListaMapas)
+  ListaGameModes = []
+  for sublist in sheet.get("B:B"):
+      for item in sublist:
+          ListaGameModes.append(item)
+  if seleccion:
+    output="These are the records for MAP " +seleccion+" \n "
+    for x in MatrizRecords:
+        if x:
+            if x[2].lower() == seleccion:
+                output+= x[0]+"\t➡️\t"+x[1]+" "+ x[3]+"\n "
+  elif CloseMatch(mapa,ListaGameModes):
+    output="These are the records for GAMEMODE " +CloseMatch(mapa,ListaGameModes)+" \n "
+    for x in MatrizRecords:
+        if x:
+            if x[1].lower() == CloseMatch(mapa,ListaGameModes):
+                output+= x[0]+"\t➡️\t"+x[2]+" "+ x[3]+"\n "
+  else:
+    output = "Yeah, dude, I dont see that one on the Big team maps or Heavies GameMode"
   return output
 def listToString(s):
   str1 = ""
