@@ -52,7 +52,7 @@ def webhook():
         send_message(random.choice(rude))
     if 'who is the best at halo?' in data['text'] or 'who is the best at halo' in data['text']:
         send_message(random.choice(trees))
-    if 'what does ftbb means?' in data['text'] in data['text']:
+    if 'what does ftbb mean?' in data['text'] in data['text']:
         send_message(random.choice(ftbb))
     if 'heavyrecords!' in data['text']:
         send_message(listToString(GetHeavyRecord(data['text'][14:])))
