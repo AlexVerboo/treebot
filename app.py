@@ -68,6 +68,8 @@ def webhook():
         send_message(updatename(originaldata))
     if 'daysoff!' in data['text'] :
         send_message(DaysOff())
+    if 'butthole!' in data ['text'] :
+        send_image("alright", "https://i.groupme.com/220x324.gif.86fdea4e51b44ae2a23a2f107905e3ea")
    #if '@all' in data['text']:
    #    tagall('Calling All Trees',allids())
   return "ok", 200
