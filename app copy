@@ -77,16 +77,16 @@ def webhook():
 def send_message(msg):
   url  = 'https://api.groupme.com/v3/bots/post'
   data = {
-          'bot_id' : os.getenv('GROUPME_BOT_ID2'),
+          'bot_id' : os.getenv('GROUPME_BOT_ID'),
           'text'   : msg,
          }
   request = requests.post(url, json = data)
   json = urlopen(request).read().decode()
 def send_image(msg,imageurl):
   url  = 'https://api.groupme.com/v3/bots/post'
-  log(os.getenv('GROUPME_BOT_ID2'))
+  log(os.getenv('GROUPME_BOT_ID'))
   data = {
-          "bot_id"  : os.getenv('GROUPME_BOT_ID2'),
+          "bot_id"  : os.getenv('GROUPME_BOT_ID'),
           "text"    :  msg,
           "attachments" : [
             {
@@ -100,7 +100,7 @@ def send_image(msg,imageurl):
 def tagall(msg,ids):
   url  = 'https://api.groupme.com/v3/bots/post'
   data = {
-          "bot_id"  : os.getenv('GROUPME_BOT_ID2'),
+          "bot_id"  : os.getenv('GROUPME_BOT_ID'),
           "text"    :  msg,
           "attachments" : [
              {

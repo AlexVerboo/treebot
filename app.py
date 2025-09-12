@@ -115,47 +115,60 @@ def webhook():
 # ==============================
 # UTILIDADES DE ENVÍO DE MENSAJES
 # ==============================
+# =========================
+# Variable global para el Bot ID
+# =========================
+GROUPME_BOT_ID = os.getenv("GROUPME_BOT_ID2")
+
+# =========================
+# Función para enviar mensajes de texto
+# =========================
 def send_message(msg):
-  url  = 'https://api.groupme.com/v3/bots/post'
-  data = {
-          'bot_id' : os.getenv('GROUPME_BOT_ID'),
-          'text'   : msg,
-         }
-  request = requests.post(url, json = data)
-  json = urlopen(request).read().decode()
+    url = 'https://api.groupme.com/v3/bots/post'
+    data = {
+        'bot_id': GROUPME_BOT_ID,
+        'text': msg,
+    }
+    request = requests.post(url, json=data)
+    json = urlopen(request).read().decode()
 
-def send_image(msg,imageurl):
-  url  = 'https://api.groupme.com/v3/bots/post'
-  log(os.getenv('GROUPME_BOT_ID'))
-  data = {
-          "bot_id"  : os.getenv('GROUPME_BOT_ID'),
-          "text"    :  msg,
-          "attachments" : [
+# =========================
+# Función para enviar imágenes
+# =========================
+def send_image(msg, imageurl):
+    url = 'https://api.groupme.com/v3/bots/post'
+    log(GROUPME_BOT_ID)
+    data = {
+        "bot_id": GROUPME_BOT_ID,
+        "text": msg,
+        "attachments": [
             {
-              "type"  : "image",
-              "url"   : imageurl
+                "type": "image",
+                "url": imageurl
             }
-          ]
-        }
-  request = requests.post(url, json = data)
-  json = urlopen(request).read().decode()
+        ]
+    }
+    request = requests.post(url, json=data)
+    json = urlopen(request).read().decode()
 
-def tagall(msg,ids):
-  url  = 'https://api.groupme.com/v3/bots/post'
-  data = {
-          "bot_id"  : os.getenv('GROUPME_BOT_ID'),
-          "text"    :  msg,
-          "attachments" : [
-             {
-            	"type": "mentions",
-            	"user_ids": ids,
-            	"loci": []
+# =========================
+# Función para mencionar a todos
+# =========================
+def tagall(msg, ids):
+    url = 'https://api.groupme.com/v3/bots/post'
+    data = {
+        "bot_id": GROUPME_BOT_ID,
+        "text": msg,
+        "attachments": [
+            {
+                "type": "mentions",
+                "user_ids": ids,
+                "loci": []
             }
-          ]
-        }
-  request = requests.post(url, json = data)
-  json = urlopen(request).read().decode()
-
+        ]
+    }
+    request = requests.post(url, json=data)
+    json = urlopen(request).read().decode()
 # ==============================
 # FUNCIONES DE LOGGING
 # ==============================
