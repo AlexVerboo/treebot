@@ -1,18 +1,16 @@
-# ==============================
-# IMPORTS
-# ==============================
-import os
-import sys
-import requests
-import random
-import time
-import gspread
-import difflib
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
-from flask import Flask, request
-from selenium import webdriver
-from oauth2client.service_account import ServiceAccountCredentials
+# ===== Librerías estándar =====
+import os           # Para acceder a variables de entorno y rutas de archivos
+import sys          # Para imprimir y manejar salida estándar
+import random       # Para generar números aleatorios y elecciones aleatorias
+import time         # Para pausas y temporización
+import difflib      # Para encontrar coincidencias aproximadas de strings
+from urllib.request import urlopen  # Para hacer requests HTTP básicos
+
+# ===== Librerías externas =====
+import requests     # Para enviar solicitudes HTTP de manera más cómoda
+import gspread      # Para manipular hojas de cálculo de Google Sheets
+from oauth2client.service_account import ServiceAccountCredentials  # Para autenticar Google Sheets
+from flask import Flask, request     # Para crear el servidor web y recibir webhooks
 
 # ==============================
 # FLASK APP SETUP
@@ -115,29 +113,37 @@ def webhook():
 # ==============================
 # UTILIDADES DE ENVÍO DE MENSAJES
 # ==============================
-# =========================
+
+# URL base de GroupMe API
+GROUPME_API_URL = 'https://api.groupme.com/v3/bots/post'
+
 # Variable global para el Bot ID
-# =========================
 GROUPME_BOT_ID = os.getenv("GROUPME_BOT_ID2")
+
+def _post_to_groupme(data):
+    """Función interna para enviar cualquier payload al bot."""
+    try:
+        response = requests.post(GROUPME_API_URL, json=data)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        log(f"Error enviando mensaje a GroupMe: {e}")
+        return None
 
 # =========================
 # Función para enviar mensajes de texto
 # =========================
 def send_message(msg):
-    url = 'https://api.groupme.com/v3/bots/post'
     data = {
         'bot_id': GROUPME_BOT_ID,
         'text': msg,
     }
-    request = requests.post(url, json=data)
-    json = urlopen(request).read().decode()
+    return _post_to_groupme(data)
 
 # =========================
 # Función para enviar imágenes
 # =========================
 def send_image(msg, imageurl):
-    url = 'https://api.groupme.com/v3/bots/post'
-    log(GROUPME_BOT_ID)
     data = {
         "bot_id": GROUPME_BOT_ID,
         "text": msg,
@@ -148,8 +154,8 @@ def send_image(msg, imageurl):
             }
         ]
     }
-    request = requests.post(url, json=data)
-    json = urlopen(request).read().decode()
+    return _post_to_groupme(data)
+
 
 # =========================
 # Función para mencionar a todos
