@@ -29,6 +29,7 @@ def log(msg):
     sys.stdout.flush()
 
 def _post_to_groupme(data):
+    """Función interna para enviar cualquier payload al bot."""
     try:
         response = requests.post(GROUPME_API_URL, json=data)
         response.raise_for_status()
@@ -137,7 +138,7 @@ def webhook():
         "-) No discrimination\n-) No religion\n-) No politics (including other countries)\n-) No spamming"
     )
     rude = [
-        "Say that one more time and I wont sell you my bath water again.", f"Fuck you {name}", 
+        f"Say that one more time and I wont sell you my bath water again.", f"Fuck you {name}", 
         "Yeah right, says the halo 4 lover", "Watch Out, this one learned from Drawn Together...🤪🤪",
         "Oh no, what do I do now? 💥💥 ", "No, tu chinga tu madre. pinche perro aguado", 
         "Nice . . . ", "I guess I'll cry now. or not, maybe ill find you and eat your waffles",
@@ -202,7 +203,7 @@ def webhook():
 
     # ===== Ejecutar comandos que coincidan =====
     for cmd, action in comandos.items():
-        if cmd in text or (cmd in originaldata and cmd == "changed name"):
+        if cmd in text or (cmd == "changed name" and cmd in originaldata):
             result = action()
             if result is not None:
                 break
