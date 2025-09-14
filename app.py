@@ -119,7 +119,7 @@ def hello():
 def webhook():
     data = request.get_json()
     originaldata = data['text']
-    text = data['text'].lower()
+    text = data['text'].lower().strip()
     name = data['name']
     sender_id = data.get('sender_id', '')
 
@@ -200,9 +200,9 @@ def webhook():
         "butthole!": lambda: send_message("you have reached the butthole limit of the month"),
     }
 
-    # ===== Ejecutar comandos que coincidan =====
+    # ===== Ejecutar comandos que coincidan (exactos) =====
     for cmd, action in comandos.items():
-        if cmd in text or (cmd == "changed name" and cmd in originaldata):
+        if text == cmd or (cmd == "changed name" and cmd in originaldata):
             result = action()
             if result is not None:
                 break
