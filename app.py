@@ -19,7 +19,7 @@ from flask import Flask, request
 app = Flask(__name__)
 
 GROUPME_API_URL = 'https://api.groupme.com/v3/bots/post'
-GROUPME_BOT_ID = os.getenv("GROUPME_BOT_ID2")
+GROUPME_BOT_ID = os.getenv("GROUPME_BOT_ID")
 
 # ==============================
 # FUNCIONES DE ENVÍO DE MENSAJES
@@ -189,7 +189,6 @@ def webhook():
         ),
         "fuck you bot": lambda: send_message(random.choice(rude)),
         "who is the best at halo?": lambda: send_message(random.choice(trees)),
-        "who is the best at halo": lambda: send_message(random.choice(trees)),
         "what does ftbb mean?": lambda: send_message(random.choice(ftbb)),
         "heavyrecords!": lambda: send_message(listToString(GetHeavyRecord(text[14:]))),
         "squadrecords!": lambda: send_message(listToString(GetSquadRecord(text[14:]))),
