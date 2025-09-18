@@ -58,6 +58,20 @@ def tagall(msg, ids):
     }
     return _post_to_groupme(data)
 
+def show_help():
+    return (
+        "📖 *Comandos disponibles:*\n"
+        "- `rules!` → Muestra las reglas\n"
+        "- `back out` → Mensaje de salida\n"
+        "- `settings!` → Ajustes\n"
+        "- `that's it for me boys` → Mensaje de despedida\n"
+        "- `who is the best at halo?` → Da un nombre (al azar)\n"
+        "- `bot do you speak spanish?` → Responde si habla español\n"
+        "- `random!` → Devuelve una imagen al azar del archivo\n"
+        "- `mystats!` → Muestra tus estadísticas personales\n"
+        "- `menu` o `help` → Muestra esta lista de comandos"
+    )
+
 # ==============================
 # FUNCIONES DE GOOGLE SHEETS
 # ==============================
@@ -198,6 +212,8 @@ def webhook():
         "changed name": lambda: send_message(updatename(originaldata)) if name == "GroupMe" else None,
         "daysoff!": lambda: send_message(DaysOff()),
         "butthole!": lambda: send_message("you have reached the butthole limit of the month"),
+        "menu!": lambda: send_message(show_help()),
+        "help": lambda: send_message(show_help()),
     }
 
     # ===== Ejecutar comandos que coincidan (exactos) =====
