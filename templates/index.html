@@ -97,11 +97,15 @@ footer { color: var(--muted); font-size: 13px; }
 }
 .suggest a:hover { background: var(--leaf); color: var(--sky); }
 [hidden] { display: none !important; }
+.topnav { display: flex; gap: 14px; font: 600 14px var(--font-display); }
+.topnav a { text-decoration: none; color: var(--muted); }
+.topnav a[aria-current="page"] { color: var(--leaf); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
+    <div class="topnav"><a href="/" aria-current="page">Records</a><a href="/roles">Roles</a></div>
     <h1>Trees in <span>Space</span> Records</h1>
     <p class="sub">Halo Infinite team records for Big Team, Squad Battle and Heavies. Times are the fastest wins; Slayer shows the final score.</p>
   </header>

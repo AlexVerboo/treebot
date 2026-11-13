@@ -29,6 +29,8 @@ RECORD_SHEETS = {
 MEMBERS_SHEET = "Trees in Space Members"
 IMAGES_SHEET = "Images"
 DAYS_OFF_SHEET = "Unofficial Medals"
+ROLES_SHEET = "Roles"
+PLAYER_STATS_SHEET = "Player Stats"
 
 # Columnas (base 0) en la hoja de miembros
 COL_PROFILE_URL = 9    # J
@@ -145,6 +147,58 @@ def get_members():
                 "profile": _profile_for(gt, profiles),
             })
     return members
+
+
+def _optional_values(sheet_name):
+    """Como _values, pero devuelve [] si la hoja todavía no existe."""
+    try:
+        return _values(sheet_name)
+    except gspread.WorksheetNotFound:
+        return []
+
+
+TRUTHY = {"true", "x", "yes", "si", "sí", "1", "✔", "✓", "✅"}
+
+
+def get_roles():
+    """Hoja "Roles": columna A = gamertag, una columna por rol (casilla o "x").
+    Devuelve (lista de roles en el orden de la hoja, {gamertag: [roles]})."""
+    rows = _optional_values(ROLES_SHEET)
+    if not rows:
+        return [], {}
+    header = [_clean(h) for h in rows[0]]
+    names = [h for h in header[1:] if h]
+    tags = {}
+    for r in rows[1:]:
+        if not r or not _clean(r[0]):
+            continue
+        tags[_clean(r[0])] = [header[i] for i in range(1, min(len(r), len(header)))
+                              if header[i] and _clean(r[i]).lower() in TRUTHY]
+    return names, tags
+
+
+def get_player_stats():
+    """Hoja "Player Stats" (la escribe player_stats_updater.py).
+    Devuelve ({gamertag: {stat: número}}, fecha de actualización)."""
+    rows = _optional_values(PLAYER_STATS_SHEET)
+    if not rows:
+        return {}, ""
+    header = [_clean(h) for h in rows[0]]
+    stats, updated = {}, ""
+    for r in rows[1:]:
+        if not r or not _clean(r[0]):
+            continue
+        if _clean(r[0]).lower() == "updated":
+            updated = _clean(r[1]) if len(r) > 1 else ""
+            continue
+        row = {}
+        for k, v in zip(header[1:], r[1:]):
+            try:
+                row[k] = float(str(v).replace(",", ""))
+            except ValueError:
+                pass
+        stats[_clean(r[0])] = row
+    return stats, updated
 
 
 def _profile_for(gamertag, profiles):

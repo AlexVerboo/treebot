@@ -12,6 +12,7 @@ import requests
 from flask import Flask, request, jsonify, render_template
 
 import sheets
+import roles
 
 # ==============================
 # CONFIGURACIÓN DEL BOT
@@ -131,6 +132,41 @@ def home():
 @app.route("/api/records", methods=['GET'])
 def api_records():
     return jsonify(site_data())
+
+def roles_data():
+    role_names, tags = sheets.get_roles()
+    stats, updated = sheets.get_player_stats()
+    key = lambda gt: gt.lower().replace(" ", "")
+    tags_by_key = {key(gt): t for gt, t in tags.items()}
+    profiles = {key(m["gamertag"]): m["profile"] for m in sheets.get_members()}
+    players, seen = [], set()
+    for gt in list(stats) + list(tags):
+        k = key(gt)
+        if k in seen:
+            continue
+        seen.add(k)
+        players.append({
+            "gamertag": gt,
+            "roles": tags_by_key.get(k, []),
+            "stats": stats.get(gt, {}),
+            "profile": profiles.get(k, ""),
+        })
+    cfg = roles.page_config(role_names)
+    cfg.update({"players": players, "updated": updated or "never"})
+    return cfg
+
+@app.route("/roles", methods=['GET'])
+def roles_page():
+    try:
+        data = roles_data()
+    except Exception as e:
+        log(f"Error leyendo roles: {e!r}")
+        return "Trees in Space! (roles unavailable right now)", 503
+    return render_template("roles.html", data_json=json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
+
+@app.route("/api/roles", methods=['GET'])
+def api_roles():
+    return jsonify(roles_data())
 
 @app.route("/health", methods=['GET'])
 def health():

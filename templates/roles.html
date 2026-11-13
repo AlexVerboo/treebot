@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trees in Space Roles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: header + tabs, filters row, one records table per tab. Single dark theme (night sky). */
+  --sky: #0c1424;
+  --panel: #131e33;
+  --line: #24324f;
+  --text: #e6ecf5;
+  --muted: #8d9bb5;
+  --leaf: #5fd08a;
+  --gold: #f0b94a;
+  --font-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--sky);
+  background-image: radial-gradient(1px 1px at 20% 30%, #ffffff55 50%, transparent 51%),
+                    radial-gradient(1px 1px at 70% 10%, #ffffff44 50%, transparent 51%),
+                    radial-gradient(1px 1px at 85% 60%, #ffffff33 50%, transparent 51%),
+                    radial-gradient(1px 1px at 40% 80%, #ffffff33 50%, transparent 51%);
+  background-size: 260px 260px;
+  color: var(--text);
+  font: 15px/1.5 var(--font-body);
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; display: grid; gap: 24px; }
+header { display: grid; gap: 6px; }
+h1 { font: 700 clamp(28px, 5vw, 40px)/1.1 var(--font-display); margin: 0; letter-spacing: .02em; text-wrap: balance; }
+h1 span { color: var(--leaf); }
+.sub { color: var(--muted); margin: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tile b { display: block; font: 700 26px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.tile small { color: var(--muted); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--line); }
+nav button {
+  background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted);
+  font: 600 15px var(--font-display); padding: 10px 12px; cursor: pointer; letter-spacing: .03em;
+}
+nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--leaf); }
+nav button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.filters label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+select, input {
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: inherit; min-width: 170px;
+}
+.count { color: var(--muted); font-size: 13px; margin-left: auto; }
+.table-box { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 600 12px var(--font-display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.map { font-weight: 600; }
+td.result { font-family: var(--font-display); font-size: 16px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid; }
+.pill.best { color: var(--gold); border-color: var(--gold); }
+.pill.good { color: var(--muted); border-color: var(--line); }
+a { color: var(--leaf); }
+.members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.member { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.member b { font-family: var(--font-display); }
+.empty { padding: 20px; color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; }
+.promo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; justify-content: space-between;
+  text-decoration: none; color: var(--text);
+  background: linear-gradient(100deg, #1a2a1f, var(--panel) 60%);
+  border: 1px solid var(--leaf); border-radius: 10px; padding: 14px 18px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.promo:hover { transform: translateY(-1px); box-shadow: 0 6px 20px #5fd08a22; }
+.promo .tag { font: 600 11px var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--leaf); }
+.promo b { display: block; font: 700 20px/1.2 var(--font-display); }
+.promo span.desc { color: var(--muted); font-size: 14px; }
+.promo .cta { font: 600 14px var(--font-display); color: var(--sky); background: var(--leaf); border-radius: 99px; padding: 8px 16px; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .promo { transition: none; } .promo:hover { transform: none; } }
+.suggest {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px;
+  background: var(--panel); border: 1px dashed var(--line); border-radius: 10px; padding: 16px 18px;
+}
+.suggest h2 { margin: 0 0 2px; font: 700 18px var(--font-display); }
+.suggest p { margin: 0; color: var(--muted); font-size: 14px; }
+.suggest a {
+  font: 600 14px var(--font-display); text-decoration: none; color: var(--text);
+  border: 1px solid var(--leaf); border-radius: 8px; padding: 9px 16px; white-space: nowrap;
+}
+.suggest a:hover { background: var(--leaf); color: var(--sky); }
+[hidden] { display: none !important; }
+</style>
+<style>
+.topnav { display: flex; gap: 14px; font: 600 14px var(--font-display); }
+.topnav a { text-decoration: none; color: var(--muted); }
+.topnav a[aria-current="page"] { color: var(--leaf); }
+.role-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.role-head h2 { margin: 0; font: 700 24px var(--font-display); }
+.role-head p { margin: 0; color: var(--muted); }
+th button {
+  all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center;
+  font: 600 12px var(--font-display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+}
+th button:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+th[aria-sort] button { color: var(--text); }
+th.num, td.num { text-align: right; }
+td.gt { font-weight: 600; font-family: var(--font-display); }
+td.gt a { color: var(--text); text-decoration: none; }
+td.gt a:hover { color: var(--leaf); }
+td.top { color: var(--gold); font-weight: 600; }
+td.na { color: var(--muted); }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; min-width: 170px; }
+.tag { font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.tag.on { border-color: var(--leaf); color: var(--leaf); }
+.rank { color: var(--muted); width: 1%; }
+.note { color: var(--muted); font-size: 13px; margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="topnav"><a href="/">Records</a><a href="/roles" aria-current="page">Roles</a></div>
+    <h1>Trees in <span>Space</span> Roles</h1>
+    <p class="sub">Each Tree can wear several role tags. Every tab shows the Halo Infinite stats that matter for that role. Click a column to sort.</p>
+  </header>
+
+  <nav role="tablist" id="tabs"></nav>
+
+  <section id="view" style="display:grid;gap:14px">
+    <div class="role-head"><h2 id="r-title"></h2><p id="r-blurb"></p><span class="count" id="count"></span></div>
+    <div class="table-box"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
+    <p class="note">Lifetime matchmaking stats, per game. Flag, zone, oddball and stockpile columns are per game of that mode; “—” means no games of that mode. Gold marks the best in the tab. Tags are set with the checkboxes in the “Roles” sheet.</p>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const DATA = {{ data_json|safe }};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-");
+const ALL = { name: "All Trees", icon: "🌲", blurb: "Everyone, with or without a tag.", columns: DATA.overview, all: true };
+const TABS = [...DATA.roles, ALL];
+
+// Columnas que dependen de un modo: se muestran "—" si el jugador no tiene partidas de ese modo
+const BASE = { caps_pg: "ctf_matches", grabs_pg: "ctf_matches", returns_pg: "ctf_matches",
+  carrier_kills_pg: "ctf_matches", carry_time_pg: "ctf_matches",
+  zone_caps_pg: "zone_matches", zone_def_kills_pg: "zone_matches", zone_off_kills_pg: "zone_matches", zone_time_pg: "zone_matches",
+  ball_time_pg: "ball_matches", ball_carrier_kills_pg: "ball_matches",
+  seeds_dep_pg: "seed_matches", seed_carrier_kills_pg: "seed_matches" };
+
+let current = TABS[0], sortKey = null, sortDir = 1;
+
+function value(p, k) {
+  if (!("matches" in p.stats)) return null;
+  if (BASE[k] && !p.stats[BASE[k]]) return null;
+  const v = p.stats[k];
+  return typeof v === "number" ? v : null;
+}
+
+function fmt(k, v) {
+  if (v === null) return "—";
+  const f = (DATA.stats[k] || {}).fmt;
+  if (f === "pct") return (v * 100).toFixed(1) + "%";
+  if (f === "i") return Math.round(v).toLocaleString("en-US");
+  if (f === "time") { const s = Math.round(v); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+  return v.toFixed(2);
+}
+
+function hasRole(p, role) { return p.roles.some(r => r.toLowerCase() === role.toLowerCase()); }
+
+function renderTabs() {
+  $("tabs").innerHTML = TABS.map(t => {
+    const n = t.all ? DATA.players.length : DATA.players.filter(p => hasRole(p, t.name)).length;
+    return `<button role="tab" data-slug="${slug(t.name)}" aria-selected="${t === current}">${t.icon} ${esc(t.name)} <small>(${n})</small></button>`;
+  }).join("");
+  document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => { location.hash = b.dataset.slug; }));
+}
+
+function render() {
+  const t = current, cols = t.columns;
+  const low = (k) => (DATA.stats[k] || {}).low;
+  if (!sortKey || !cols.includes(sortKey)) { sortKey = cols[0]; sortDir = low(sortKey) ? 1 : -1; }
+  $("r-title").textContent = `${t.icon} ${t.name}`;
+  $("r-blurb").textContent = t.blurb || "";
+  const list = DATA.players.filter(p => t.all || hasRole(p, t.name));
+  list.sort((a, b) => {
+    const va = value(a, sortKey), vb = value(b, sortKey);
+    if (va === null && vb === null) return a.gamertag.localeCompare(b.gamertag);
+    if (va === null) return 1; if (vb === null) return -1;
+    return (va - vb) * sortDir;
+  });
+  const best = {};
+  cols.forEach(k => {
+    const vals = list.map(p => value(p, k)).filter(v => v !== null);
+    if (vals.length > 1) best[k] = low(k) ? Math.min(...vals) : Math.max(...vals);
+  });
+  $("count").textContent = `${list.length} tree${list.length === 1 ? "" : "s"}`;
+  $("thead").innerHTML = `<tr><th class="rank">#</th><th>Gamertag</th><th>Tags</th>` + cols.map(k => {
+    const s = k === sortKey ? (sortDir < 0 ? "descending" : "ascending") : null;
+    return `<th class="num"${s ? ` aria-sort="${s}"` : ""}><button data-k="${k}">${esc((DATA.stats[k] || {}).label || k)}${s ? (sortDir < 0 ? " ▼" : " ▲") : ""}</button></th>`;
+  }).join("") + `</tr>`;
+  document.querySelectorAll("#thead button").forEach(b => b.addEventListener("click", () => {
+    const k = b.dataset.k;
+    if (k === sortKey) sortDir = -sortDir; else { sortKey = k; sortDir = low(k) ? 1 : -1; }
+    render();
+  }));
+  const span = cols.length + 3;
+  $("rows").innerHTML = list.length ? list.map((p, i) => `<tr>
+      <td class="rank">${i + 1}</td>
+      <td class="gt">${p.profile ? `<a href="${esc(p.profile)}" target="_blank" rel="noopener">${esc(p.gamertag)}</a>` : esc(p.gamertag)}</td>
+      <td><div class="tags">${p.roles.map(r => `<span class="tag${r.toLowerCase() === t.name.toLowerCase() ? " on" : ""}">${esc(r)}</span>`).join("")}</div></td>
+      ${cols.map(k => { const v = value(p, k); return `<td class="num${v === null ? " na" : v === best[k] ? " top" : ""}">${fmt(k, v)}</td>`; }).join("")}
+    </tr>`).join("")
+    : `<tr><td colspan="${span}" class="empty">Nobody has the ${esc(t.name)} tag yet. Tick the ${esc(t.name)} box next to their gamertag in the “Roles” sheet.</td></tr>`;
+}
+
+function route() {
+  const h = location.hash.slice(1);
+  current = TABS.find(t => slug(t.name) === h) || TABS[0];
+  sortKey = null;
+  renderTabs(); render();
+}
+window.addEventListener("hashchange", route);
+$("footer").textContent = `Stats from the Halo Infinite API, refreshed daily. Last update: ${DATA.updated}.`;
+route();
+</script>
+</body>
+</html>

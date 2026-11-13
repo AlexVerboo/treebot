@@ -31,3 +31,13 @@ jobs:
           GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
           MIN_GROUP_PLAYERS: ${{ vars.MIN_GROUP_PLAYERS || '5' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
+      - name: Stats por jugador (página de roles)
+        if: always()
+        run: python player_stats_updater.py
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
+          STATS_SEASON: ${{ vars.STATS_SEASON || '' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
