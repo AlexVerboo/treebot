@@ -167,13 +167,13 @@ def get_roles():
     if not rows:
         return [], {}
     header = [_clean(h) for h in rows[0]]
-    names = [h for h in header[1:] if h]
+    names = [h for h in header[1:] if h and h.lower() != "last played"]
     tags = {}
     for r in rows[1:]:
         if not r or not _clean(r[0]):
             continue
         tags[_clean(r[0])] = [header[i] for i in range(1, min(len(r), len(header)))
-                              if header[i] and _clean(r[i]).lower() in TRUTHY]
+                              if header[i] in names and _clean(r[i]).lower() in TRUTHY]
     return names, tags
 
 

@@ -160,34 +160,92 @@ def _worksheet(book, name, rows, cols):
         return book.add_worksheet(title=name, rows=rows, cols=cols), True
 
 
-def ensure_roles_sheet(book, gamertags):
-    """Crea la hoja Roles con casillas o agrega los miembros que falten."""
-    header = ["Gamertag"] + roles.role_names()
-    ws, created = _worksheet(book, ROLES_SHEET, max(len(gamertags) + 10, 50), len(header) + 4)
+LAST_PLAYED = "Last played"
+CDMX = dt.timezone(dt.timedelta(hours=-6))
+
+
+def ensure_roles_sheet(book, gamertags, last_played=None):
+    """Mantiene la hoja Roles: Gamertag | Last played | una columna con casillas por rol.
+    Agrega miembros nuevos, actualiza "Last played" y ordena por la conexión más reciente.
+    Nunca borra los tags que ya estaban marcados."""
+    last_played = last_played or {}
+    ws, created = _worksheet(book, ROLES_SHEET, max(len(gamertags) + 10, 50),
+                             len(roles.ROLES) + 6)
     if ws is None:
         log(f"(DRY RUN) Crearía la hoja {ROLES_SHEET} con {len(gamertags)} miembros")
         return
     rows = [] if created else ws.get_all_values()
-    if not rows or not any(rows[0]):
-        ws.update(range_name="A1", values=[header], value_input_option="RAW")
-        rows = [header]
-        ws.format("A1:Z1", {"textFormat": {"bold": True}})
-        ws.freeze(rows=1, cols=1)
-    have = {sheets._clean(r[0]).lower() for r in rows[1:] if r}
-    width = max(len(rows[0]), len(header))
-    new = [[gt] + [False] * (width - 1) for gt in gamertags if gt.lower() not in have]
-    if new:
-        start = len(rows) + 1
-        ws.update(range_name=f"A{start}", values=new, value_input_option="RAW")
-        log(f"Hoja {ROLES_SHEET}: {len(new)} miembro(s) agregado(s)")
-    # Casillas en todas las columnas de roles (B en adelante)
-    total = len(rows) + len(new)
-    if total > 1:
-        book.batch_update({"requests": [{"setDataValidation": {
+    old_header = [sheets._clean(h) for h in rows[0]] if rows and any(rows[0]) else []
+
+    # Columnas de rol: las que ya tiene la hoja (en su orden) + las de roles.py que falten
+    role_cols = [h for h in old_header[1:] if h and h.lower() != LAST_PLAYED.lower()]
+    for name in roles.role_names():
+        if name.lower() not in (h.lower() for h in role_cols):
+            role_cols.append(name)
+    header = ["Gamertag", LAST_PLAYED] + role_cols
+
+    # Lo que ya había, por gamertag
+    people = {}
+    for r in rows[1:]:
+        gt = sheets._clean(r[0]) if r else ""
+        if not gt:
+            continue
+        cells = dict(zip(old_header, r))
+        people[gt.lower()] = {"gt": gt, "last": sheets._clean(cells.get(LAST_PLAYED, "")),
+                              "tags": {h: sheets._clean(cells.get(h, "")).lower() in sheets.TRUTHY
+                                       for h in role_cols}}
+    added = 0
+    for gt in gamertags:
+        if gt.lower() not in people:
+            people[gt.lower()] = {"gt": gt, "last": "", "tags": {}}
+            added += 1
+    for gt, when in last_played.items():
+        if gt.lower() in people and when:
+            people[gt.lower()]["last"] = when.astimezone(CDMX).strftime("%Y-%m-%d %H:%M")
+
+    # Más reciente arriba; los que no tienen fecha al final ("AAAA-MM-DD HH:MM" ordena bien como texto)
+    ordered = sorted([p for p in people.values() if p["last"]], key=lambda p: p["last"], reverse=True) + \
+              sorted([p for p in people.values() if not p["last"]], key=lambda p: p["gt"].lower())
+
+    values = [header] + [[p["gt"], p["last"]] + [bool(p["tags"].get(h)) for h in role_cols]
+                         for p in ordered]
+    if ws.row_count < len(values) + 5:
+        ws.add_rows(len(values) + 5 - ws.row_count)
+    if ws.col_count < len(header):
+        ws.add_cols(len(header) - ws.col_count)
+    ws.batch_clear([f"A1:{chr(ord('A') + max(len(header), len(old_header)) - 1)}{max(len(rows), len(values)) + 1}"])
+    ws.update(range_name="A1", values=values, value_input_option="RAW")
+    total = len(values)
+    book.batch_update({"requests": [
+        # Sin casillas en "Last played", casillas en los roles
+        {"setDataValidation": {"range": {"sheetId": ws.id, "startRowIndex": 1, "endRowIndex": total + 50,
+                                         "startColumnIndex": 1, "endColumnIndex": 2}}},
+        {"setDataValidation": {
             "range": {"sheetId": ws.id, "startRowIndex": 1, "endRowIndex": total,
-                      "startColumnIndex": 1, "endColumnIndex": width},
-            "rule": {"condition": {"type": "BOOLEAN"}, "showCustomUi": True},
-        }}]})
+                      "startColumnIndex": 2, "endColumnIndex": len(header)},
+            "rule": {"condition": {"type": "BOOLEAN"}, "showCustomUi": True}}},
+        {"repeatCell": {"range": {"sheetId": ws.id, "startRowIndex": 0, "endRowIndex": 1},
+                        "cell": {"userEnteredFormat": {"textFormat": {"bold": True}}},
+                        "fields": "userEnteredFormat.textFormat.bold"}},
+        {"updateSheetProperties": {"properties": {"sheetId": ws.id, "gridProperties": {
+            "frozenRowCount": 1, "frozenColumnCount": 1}},
+            "fields": "gridProperties.frozenRowCount,gridProperties.frozenColumnCount"}},
+    ]})
+    log(f"Hoja {ROLES_SHEET}: {len(ordered)} miembros ordenados por última partida"
+        + (f", {added} nuevo(s)" if added else ""))
+
+
+async def last_match_time(client, xuid):
+    """Hora en que terminó su última partida (cualquier tipo), o None."""
+    try:
+        hist = await api(client.stats.get_match_history, xuid, 0, 1, "all")
+    except Exception as e:
+        log(f"    (última partida: {short_err(e)})")
+        return None
+    if not hist.results:
+        return None
+    info = hist.results[0].match_info
+    return info.end_time or info.start_time
 
 
 def write_stats(book, rows_by_gt):
@@ -220,8 +278,9 @@ async def main():
                                     clearance_token=player.clearance_token.token,
                                     requests_per_second=2)
         members = await resolve_members(client)
-        rows_by_gt = {}
+        rows_by_gt, last_played = {}, {}
         for xuid, gt in members.items():
+            last_played[gt] = await last_match_time(client, xuid)
             try:
                 rows_by_gt[gt] = await player_row(client, xuid)
                 log(f"- {gt}: {rows_by_gt[gt]['matches']} partidas")
@@ -232,7 +291,7 @@ async def main():
     gamertags = [r[sheets.COL_GAMERTAG].strip()
                  for r in sheets._values(sheets.MEMBERS_SHEET, use_cache=False)
                  if len(r) > sheets.COL_GAMERTAG and r[sheets.COL_GAMERTAG].strip()]
-    ensure_roles_sheet(book, gamertags)
+    ensure_roles_sheet(book, gamertags, last_played)
     write_stats(book, rows_by_gt)
 
 
