@@ -11,14 +11,18 @@ Guárdalo como secreto HALO_REFRESH_TOKEN en GitHub (no lo subas al repo).
 
 import asyncio
 import getpass
+import os
 
 from aiohttp import ClientSession
 from spnkr import AzureApp, authenticate_player, refresh_player_tokens
 
 
 async def main():
-    client_id = input("Azure Client ID: ").strip()
-    client_secret = getpass.getpass("Azure Client Secret (no se ve al escribir): ").strip()
+    client_id = os.getenv("AZURE_CLIENT_ID") or input("Azure Client ID: ").strip()
+    client_secret = (os.getenv("AZURE_CLIENT_SECRET")
+                     or getpass.getpass("Azure Client Secret (no se ve al escribir): ").strip())
+    print(f"Client ID: {client_id}")
+    print(f"Secreto: {len(client_secret)} caracteres, termina en ...{client_secret[-4:]}")
     app = AzureApp(client_id, client_secret, "https://localhost")
     async with ClientSession() as session:
         print("\n1) Abre en tu navegador el enlace que aparece abajo e inicia sesión con tu cuenta de Xbox.")
