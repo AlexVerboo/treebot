@@ -1,0 +1,4 @@
+# Solo para el actualizador de récords (GitHub Actions, Python 3.11+)
+spnkr==0.9.4
+gspread==6.1.4
+requests>=2.31

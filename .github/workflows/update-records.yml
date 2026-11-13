@@ -1,0 +1,33 @@
+name: Update Halo records
+
+on:
+  schedule:
+    # Todos los días a las 06:17 UTC (00:17 hora de CDMX)
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Solo mostrar, sin escribir en la hoja ni avisar en GroupMe"
+        type: boolean
+        default: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements-updater.txt
+      - name: Buscar récords nuevos
+        run: python records_updater.py
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
+          GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
+          MIN_GROUP_PLAYERS: ${{ vars.MIN_GROUP_PLAYERS || '4' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
