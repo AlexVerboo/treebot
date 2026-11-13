@@ -85,6 +85,17 @@ footer { color: var(--muted); font-size: 13px; }
 .promo span.desc { color: var(--muted); font-size: 14px; }
 .promo .cta { font: 600 14px var(--font-display); color: var(--sky); background: var(--leaf); border-radius: 99px; padding: 8px 16px; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) { .promo { transition: none; } .promo:hover { transform: none; } }
+.suggest {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px;
+  background: var(--panel); border: 1px dashed var(--line); border-radius: 10px; padding: 16px 18px;
+}
+.suggest h2 { margin: 0 0 2px; font: 700 18px var(--font-display); }
+.suggest p { margin: 0; color: var(--muted); font-size: 14px; }
+.suggest a {
+  font: 600 14px var(--font-display); text-decoration: none; color: var(--text);
+  border: 1px solid var(--leaf); border-radius: 8px; padding: 9px 16px; white-space: nowrap;
+}
+.suggest a:hover { background: var(--leaf); color: var(--sky); }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -134,6 +145,14 @@ footer { color: var(--muted); font-size: 13px; }
 
   <section id="members-view" hidden>
     <div class="members" id="members"></div>
+  </section>
+
+  <section class="suggest" aria-labelledby="suggest-title">
+    <div>
+      <h2 id="suggest-title">📬 Suggestion Box</h2>
+      <p>Got an idea to make Trees in Space better? Every suggestion is carefully reviewed.</p>
+    </div>
+    <a href="{{ url_for('static', filename='suggestion-box.jpg') }}" target="_blank" rel="noopener">Submit a suggestion</a>
   </section>
 
   <footer id="footer"></footer>
