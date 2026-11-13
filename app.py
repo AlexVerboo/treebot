@@ -2,16 +2,16 @@
 # IMPORTS
 # ==============================
 import os
+import re
 import sys
+import json
 import random
 import time
-import difflib
-from urllib.request import urlopen
 
 import requests
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from flask import Flask, request
+from flask import Flask, request, jsonify, render_template
+
+import sheets
 
 # ==============================
 # CONFIGURACIÓN DEL BOT
@@ -20,6 +20,7 @@ app = Flask(__name__)
 
 GROUPME_API_URL = 'https://api.groupme.com/v3/bots/post'
 GROUPME_BOT_ID = os.getenv("GROUPME_BOT_ID")
+BOT_NAME = os.getenv("BOT_NAME", "Wild Palm Tree")
 
 # ==============================
 # FUNCIONES DE ENVÍO DE MENSAJES
@@ -31,16 +32,18 @@ def log(msg):
 def _post_to_groupme(data):
     """Función interna para enviar cualquier payload al bot."""
     try:
-        response = requests.post(GROUPME_API_URL, json=data)
+        response = requests.post(GROUPME_API_URL, json=data, timeout=10)
         response.raise_for_status()
-        return response.json()
+        return True
     except requests.exceptions.RequestException as e:
         log(f"Error enviando mensaje a GroupMe: {e}")
-        return None
+        return False
 
 def send_message(msg):
-    data = {'bot_id': GROUPME_BOT_ID, 'text': msg}
-    return _post_to_groupme(data)
+    # GroupMe corta los mensajes de más de 1000 caracteres
+    for i in range(0, max(len(msg), 1), 990):
+        _post_to_groupme({'bot_id': GROUPME_BOT_ID, 'text': msg[i:i + 990]})
+    return True
 
 def send_image(msg, imageurl):
     data = {
@@ -50,97 +53,108 @@ def send_image(msg, imageurl):
     }
     return _post_to_groupme(data)
 
-def tagall(msg, ids):
-    data = {
-        "bot_id": GROUPME_BOT_ID,
-        "text": msg,
-        "attachments": [{"type": "mentions", "user_ids": ids, "loci": []}]
-    }
-    return _post_to_groupme(data)
-
 def show_help():
     return (
-        "📖 *Comandos disponibles:*\n"
-        "- `rules!` → Muestra las reglas\n"
-        "- `back out` → Mensaje de salida\n"
-        "- `settings!` → Ajustes\n"
-        "- `that's it for me boys` → Mensaje de despedida\n"
-        "- `who is the best at halo?` → Da un nombre (al azar)\n"
-        "- `bot do you speak spanish?` → Responde si habla español\n"
-        "- `random!` → Devuelve una imagen al azar del archivo\n"
-        "- `mystats!` → Muestra tus estadísticas personales\n"
-        "- `menu` o `help` → Muestra esta lista de comandos"
+        "📖 Comandos disponibles:\n"
+        "- bot? → Saluda\n"
+        "- rules! → Muestra las reglas\n"
+        "- back out → Mensaje de salida\n"
+        "- settings! → Ajustes del control\n"
+        "- that's it for me boys / bye bye → Despedida\n"
+        "- who is the best at halo? → Da un nombre (al azar)\n"
+        "- do you speak spanish? → Responde si habla español\n"
+        "- records! <mapa o modo> → Records de Big Team\n"
+        "- squadrecords! <mapa o modo> → Records de Squad Battle\n"
+        "- heavyrecords! <mapa o modo> → Records de Heavies\n"
+        "- random! → Imagen al azar del archivo\n"
+        "- mystats! → Tus estadísticas\n"
+        "- daysoff! → Días libres\n"
+        "- menu! / help → Esta lista"
     )
 
-# ==============================
-# FUNCIONES DE GOOGLE SHEETS
-# ==============================
-def get_gspread_client():
-    scope = ['https://spreadsheets.google.com/feeds',
-             'https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('client_secret.json', scope)
-    client = gspread.authorize(creds)
-    return client
+def safe(fn):
+    """Si Google Sheets falla, el bot avisa en vez de tronar."""
+    def wrapper(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except Exception as e:
+            log(f"Error en {fn.__name__}: {e!r}")
+            return send_message("My spreadsheet brain is not working right now 🌴🔥 try later")
+    return wrapper
 
-def GetRandomImage():
-    client = get_gspread_client()
-    sheet = client.open("Trees in space game Records").worksheet('Images')
-    imagepick = str(random.randrange(0, 9260))
-    imageurl = sheet.acell('A' + imagepick).value
-    send_image(f"Picking Random Image No{imagepick} from Trees in Spaces Archive", imageurl)
+@safe
+def cmd_records(kind, query):
+    return send_message(sheets.format_records(kind, query))
 
-def PersonalRecords(id):
-    client = get_gspread_client()
-    output = ""
-    gamertags = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("AB:AD")
-    usergamertag = next((x[0] for x in gamertags if x[2] == id), "")
-    if usergamertag:
-        stats = client.open("Trees in space game Records").worksheet('Trees in Space Members').get("C2:I30")
-        for x in stats:
-            if x[0] == usergamertag:
-                output += f"These are the stats for {usergamertag}\n"
-                for y in range(len(x)):
-                    output += f"{stats[0][y]} ➡️ {x[y]}\n"
-    else:
-        output = "I dont see your name on the Stats list. Tell my boss to update his shit.... NEXT!!!"
-    return output
+@safe
+def cmd_random_image():
+    n, url = sheets.random_image()
+    return send_image(f"Picking Random Image No{n} from Trees in Spaces Archive", url)
 
-# ==============================
-# UTILIDADES AUXILIARES
-# ==============================
-def listToString(s):
-    return "".join(s)
+@safe
+def cmd_mystats(sender_id):
+    return send_message(sheets.personal_stats(sender_id))
 
-def CloseMatch(str, posibilities):
-    posibilities = [p.lower() for p in posibilities]
-    matches = difflib.get_close_matches(str, posibilities, n=1, cutoff=0.8)
-    return matches[0] if matches else None
+@safe
+def cmd_daysoff():
+    return send_message(sheets.days_off())
 
-def lastWord(string):
-    return string.split()[-1]
+@safe
+def cmd_changed_name(text):
+    m = re.match(r"^(.*) changed name to (.*)$", text.strip())
+    if m:
+        return send_message(sheets.update_name(m.group(1), m.group(2)))
+    return None
 
-def FlatList(List):
-    return [item for sublist in List for item in sublist]
+def normalize(text):
+    return (text or "").lower().replace("’", "'").replace("‘", "'").strip()
 
 # ==============================
-# RUTAS FLASK
+# PÁGINA WEB PÚBLICA
 # ==============================
+def site_data():
+    return {
+        "records": {kind: sheets.get_records(kind) for kind in sheets.RECORD_SHEETS},
+        "members": sheets.get_members(),
+        "updated": time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime()),
+    }
+
 @app.route("/", methods=['GET'])
-def hello():
+def home():
+    try:
+        data = site_data()
+    except Exception as e:
+        log(f"Error leyendo la hoja para la web: {e!r}")
+        return "Trees in Space! (records unavailable right now)", 503
+    return render_template("index.html", data_json=json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
+
+@app.route("/api/records", methods=['GET'])
+def api_records():
+    return jsonify(site_data())
+
+@app.route("/health", methods=['GET'])
+def health():
     return "Trees in Space!", 200
 
+# ==============================
+# WEBHOOK DE GROUPME
+# ==============================
 @app.route('/', methods=['POST'])
 def webhook():
-    data = request.get_json()
-    originaldata = data['text']
-    text = data['text'].lower().strip()
-    name = data['name']
+    data = request.get_json(silent=True) or {}
+    originaldata = data.get('text') or ''
+    text = normalize(originaldata)
+    name = data.get('name', '')
     sender_id = data.get('sender_id', '')
 
     log(f"Recieved {data}")
+
+    # ===== Ignorar respuestas del propio bot =====
+    if data.get('sender_type') == 'bot' or name == BOT_NAME:
+        return "ok", 200
+
     time.sleep(1)
 
-    # ===== Respuestas predefinidas =====
     byebye = [
         f"night-night {name}", f"sweet dreams, I love you {name}", 
         "Bye Fucker", f"Adiós {name}", 
@@ -179,21 +193,18 @@ def webhook():
         "Man Of War, Set the defense, with a Hammer please 💢🔨", "Kama At Me Bro, or Sister", "Sinoooooooova, it's a Sinova"
     ]
 
-    # ===== Ignorar respuestas del propio bot =====
-    if name == 'Wild Palm Tree':
-        return "ok", 200
-
-    # ===== Diccionario de comandos =====
+    # ===== Comandos exactos =====
     comandos = {
         "bot?": lambda: send_message(random.choice(hihi)),
         "back out": lambda: send_message("Bowls Time!"),
         "backout": lambda: send_message("Bowls Time!"),
         "good bot": lambda: send_message("🐶"),
         "do you speak spanish?": lambda: send_message(random.choice(spanish)),
+        "bot do you speak spanish?": lambda: send_message(random.choice(spanish)),
         "rules!": lambda: send_message(rules_text if random.randint(1,10)<8 else f"You know, I like you {name}, have this:\n https://www.youtube.com/watch?v=GaAUS0GsG_M"),
         "fuck me": lambda: send_message("If you gave a chance I would take it 🎵🎵") if name == "Man Of War" else None,
         "thats it for me boys": lambda: send_message(random.choice(byebye)),
-        "that’s it for me boys": lambda: send_message(random.choice(byebye)),
+        "that's it for me boys": lambda: send_message(random.choice(byebye)),
         "bye bye": lambda: send_message(random.choice(byebye)),
         "settings!": lambda: send_message(
             '***SENSITIVITY AND ACCELERATION \nlook acceleration 3.5\nlook sensitivity horizontal 3.5\nlook sensitivity vertical 3.5\n'
@@ -204,23 +215,31 @@ def webhook():
         "fuck you bot": lambda: send_message(random.choice(rude)),
         "who is the best at halo?": lambda: send_message(random.choice(trees)),
         "what does ftbb mean?": lambda: send_message(random.choice(ftbb)),
-        "heavyrecords!": lambda: send_message(listToString(GetHeavyRecord(text[14:]))),
-        "squadrecords!": lambda: send_message(listToString(GetSquadRecord(text[14:]))),
-        "records!": lambda: send_message(listToString(GetRecord(text[9:]))),
-        "random!": lambda: GetRandomImage(),
-        "mystats!": lambda: send_message(PersonalRecords(sender_id)),
-        "changed name": lambda: send_message(updatename(originaldata)) if name == "GroupMe" else None,
-        "daysoff!": lambda: send_message(DaysOff()),
+        "random!": lambda: cmd_random_image(),
+        "mystats!": lambda: cmd_mystats(sender_id),
+        "daysoff!": lambda: cmd_daysoff(),
         "butthole!": lambda: send_message("you have reached the butthole limit of the month"),
         "menu!": lambda: send_message(show_help()),
+        "menu": lambda: send_message(show_help()),
         "help": lambda: send_message(show_help()),
     }
 
-    # ===== Ejecutar comandos que coincidan (exactos) =====
-    for cmd, action in comandos.items():
-        if text == cmd or (cmd == "changed name" and cmd in originaldata):
-            result = action()
-            if result is not None:
+    # ===== Comandos con argumento (ej. "records! breaker") =====
+    con_argumento = {
+        "heavyrecords!": "heavies",
+        "squadrecords!": "squad",
+        "records!": "btb",
+    }
+
+    # Mensaje del sistema de GroupMe cuando alguien cambia su nombre
+    if name == "GroupMe" and "changed name to" in originaldata:
+        cmd_changed_name(originaldata)
+    elif text in comandos:
+        comandos[text]()
+    else:
+        for prefix, kind in con_argumento.items():
+            if text.startswith(prefix):
+                cmd_records(kind, text[len(prefix):])
                 break
 
     return "ok", 200

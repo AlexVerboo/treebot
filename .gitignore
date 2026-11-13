@@ -1,0 +1,7 @@
+# Credenciales: nunca al repo
+client_secret.json
+*service-account*.json
+*.json:Zone.Identifier
+*Zone.Identifier
+.env
+__pycache__/

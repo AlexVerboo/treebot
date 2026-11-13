@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trees in Space Records</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Layout: header + tabs, filters row, one records table per tab. Single dark theme (night sky). */
+  --sky: #0c1424;
+  --panel: #131e33;
+  --line: #24324f;
+  --text: #e6ecf5;
+  --muted: #8d9bb5;
+  --leaf: #5fd08a;
+  --gold: #f0b94a;
+  --font-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--sky);
+  background-image: radial-gradient(1px 1px at 20% 30%, #ffffff55 50%, transparent 51%),
+                    radial-gradient(1px 1px at 70% 10%, #ffffff44 50%, transparent 51%),
+                    radial-gradient(1px 1px at 85% 60%, #ffffff33 50%, transparent 51%),
+                    radial-gradient(1px 1px at 40% 80%, #ffffff33 50%, transparent 51%);
+  background-size: 260px 260px;
+  color: var(--text);
+  font: 15px/1.5 var(--font-body);
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; display: grid; gap: 24px; }
+header { display: grid; gap: 6px; }
+h1 { font: 700 clamp(28px, 5vw, 40px)/1.1 var(--font-display); margin: 0; letter-spacing: .02em; text-wrap: balance; }
+h1 span { color: var(--leaf); }
+.sub { color: var(--muted); margin: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tile b { display: block; font: 700 26px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.tile small { color: var(--muted); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--line); }
+nav button {
+  background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted);
+  font: 600 15px var(--font-display); padding: 10px 12px; cursor: pointer; letter-spacing: .03em;
+}
+nav button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--leaf); }
+nav button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+.filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.filters label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+select, input {
+  background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: inherit; min-width: 170px;
+}
+.count { color: var(--muted); font-size: 13px; margin-left: auto; }
+.table-box { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 600 12px var(--font-display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.map { font-weight: 600; }
+td.result { font-family: var(--font-display); font-size: 16px; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid; }
+.pill.best { color: var(--gold); border-color: var(--gold); }
+.pill.good { color: var(--muted); border-color: var(--line); }
+a { color: var(--leaf); }
+.members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.member { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; }
+.member b { font-family: var(--font-display); }
+.empty { padding: 20px; color: var(--muted); }
+footer { color: var(--muted); font-size: 13px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Trees in <span>Space</span> Records</h1>
+    <p class="sub">Halo Infinite team records for Big Team, Squad Battle and Heavies. Times are the fastest wins; Slayer shows the final score.</p>
+  </header>
+
+  <section class="tiles" id="tiles"></section>
+
+  <nav role="tablist" id="tabs">
+    <button role="tab" data-tab="btb" aria-selected="true">Big Team</button>
+    <button role="tab" data-tab="squad" aria-selected="false">Squad Battle</button>
+    <button role="tab" data-tab="heavies" aria-selected="false">Heavies</button>
+    <button role="tab" data-tab="members" aria-selected="false">Members</button>
+  </nav>
+
+  <section id="records-view" class="wrap" style="padding:0">
+    <div class="filters">
+      <label for="f-map">Map<select id="f-map"></select></label>
+      <label for="f-mode">Game mode<select id="f-mode"></select></label>
+      <label for="f-tier">Record<select id="f-tier">
+        <option value="">Best and good times</option>
+        <option value="best">Best only</option>
+        <option value="good">Good only</option>
+      </select></label>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="table-box">
+      <table>
+        <thead><tr><th>Map</th><th>Game mode</th><th>Time / score</th><th>Record</th><th>Date</th><th>Match</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="members-view" hidden>
+    <div class="members" id="members"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script>
+const DATA = {{ data_json|safe }};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const norm = (s) => String(s || "").trim().toLowerCase();
+const title = (s) => String(s || "").trim();
+let tab = "btb";
+
+function uniq(list) {
+  const seen = new Map();
+  list.forEach(v => { const k = norm(v); if (k && !seen.has(k)) seen.set(k, title(v)); });
+  return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+}
+
+function fillSelect(sel, label, values) {
+  const prev = sel.value;
+  sel.innerHTML = `<option value="">All ${label}</option>` +
+    values.map(([k, v]) => `<option value="${esc(k)}">${esc(v)}</option>`).join("");
+  sel.value = values.some(([k]) => k === prev) ? prev : "";
+}
+
+function renderTiles() {
+  const all = Object.values(DATA.records).flat();
+  const maps = uniq(all.map(r => r.map)).length;
+  const tiles = [
+    [all.filter(r => r.tier === "best").length, "best-time records"],
+    [maps, "maps with a record"],
+    [(DATA.records.btb || []).length, "Big Team entries"],
+    [DATA.members.length, "trees in the group"],
+  ];
+  $("tiles").innerHTML = tiles.map(([n, l]) => `<div class="tile"><b>${n}</b><small>${l}</small></div>`).join("");
+}
+
+function renderRecords() {
+  const rows = DATA.records[tab] || [];
+  fillSelect($("f-map"), "maps", uniq(rows.map(r => r.map)));
+  fillSelect($("f-mode"), "modes", uniq(rows.map(r => r.mode)));
+  const m = $("f-map").value, g = $("f-mode").value, t = $("f-tier").value;
+  const list = rows
+    .filter(r => (!m || norm(r.map) === m) && (!g || norm(r.mode) === g) && (!t || r.tier === t))
+    .sort((a, b) => norm(a.map).localeCompare(norm(b.map)) || norm(a.mode).localeCompare(norm(b.mode)) || (a.tier === "best" ? -1 : 1));
+  $("count").textContent = `${list.length} of ${rows.length} records`;
+  $("rows").innerHTML = list.length ? list.map(r => `
+    <tr>
+      <td class="map">${esc(title(r.map))}</td>
+      <td>${esc(title(r.mode))}</td>
+      <td class="result">${esc(r.result)}</td>
+      <td><span class="pill ${r.tier}">${r.tier === "best" ? "Best" : "Good"}</span></td>
+      <td>${esc(r.date)}</td>
+      <td>${r.link ? `<a href="${esc(r.link)}" target="_blank" rel="noopener">Stats ↗</a>` : ""}</td>
+    </tr>`).join("") : `<tr><td colspan="6" class="empty">No records match these filters.</td></tr>`;
+}
+
+function renderMembers() {
+  $("members").innerHTML = DATA.members.map(p => `
+    <div class="member"><b>${esc(p.gamertag)}</b>
+    <a href="${esc(p.profile)}" target="_blank" rel="noopener">Halo Tracker profile ↗</a></div>`).join("");
+}
+
+function show(next) {
+  tab = next;
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
+  $("records-view").hidden = tab === "members";
+  $("members-view").hidden = tab !== "members";
+  if (tab !== "members") { $("f-map").value = ""; $("f-mode").value = ""; renderRecords(); }
+}
+
+document.querySelectorAll("#tabs button").forEach(b => b.addEventListener("click", () => show(b.dataset.tab)));
+["f-map", "f-mode", "f-tier"].forEach(id => $(id).addEventListener("change", renderRecords));
+$("footer").textContent = `Data from the Trees in Space game records sheet. Updated ${DATA.updated}.`;
+renderTiles(); renderMembers(); renderRecords();
+</script>
+</body>
+</html>
