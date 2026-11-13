@@ -200,6 +200,41 @@ class RecordSheet:
 # ==============================
 # Halo Infinite API
 # ==============================
+async def api(fn, *args, **kwargs):
+    """Llama a la API y la parsea; reintenta si Halo responde 429 (demasiadas peticiones) o 5xx."""
+    from aiohttp import ClientResponseError
+    for attempt in range(6):
+        try:
+            return await (await fn(*args, **kwargs)).parse()
+        except ClientResponseError as e:
+            if e.status == 429 or e.status >= 500:
+                wait = 2 ** attempt
+                try:
+                    wait = max(wait, float((e.headers or {}).get("Retry-After", 0)))
+                except (TypeError, ValueError):
+                    pass
+                await asyncio.sleep(wait)
+                continue
+            raise
+    raise RuntimeError("Halo siguió respondiendo 429/5xx después de varios intentos")
+
+
+def short_err(e):
+    status = getattr(e, "status", None)
+    return f"HTTP {status}" if status else type(e).__name__
+
+
+MAP_SUFFIXES = re.compile(r"\s*[-–:]?\s*\b(heavies|one flag|ctf|capture the flag|btb|big team|"
+                          r"slayer|stockpile|total control|king of the hill|koth|oddball|strongholds)\b.*$",
+                          re.I)
+
+
+def clean_map_name(name):
+    """'Refuge Heavies' -> 'Refuge'; 'Breaker One Flag CTF' -> 'Breaker'."""
+    cleaned = MAP_SUFFIXES.sub("", name or "").strip()
+    return cleaned or (name or "").strip()
+
+
 async def collect_candidates(client, members):
     """members: {xuid_str: gamertag}. Devuelve candidatos a récord, uno por partida."""
     from spnkr.models.refdata import LifecycleMode, Outcome
@@ -214,19 +249,18 @@ async def collect_candidates(client, members):
             fn = {"map": svc.get_map, "playlist": svc.get_playlist,
                   "variant": svc.get_ugc_game_variant}[kind]
             try:
-                names[kind][key] = (await (await fn(asset.asset_id, asset.version_id)).parse()).public_name
+                names[kind][key] = (await api(fn, asset.asset_id, asset.version_id)).public_name
             except Exception as e:
-                log(f"  no pude leer {kind} {asset.asset_id}: {e!r}")
+                log(f"  (no pude leer el nombre de un {kind}: {short_err(e)})")
                 names[kind][key] = ""
         return names[kind][key]
 
     for xuid, gamertag in members.items():
         try:
-            resp = await client.stats.get_match_history(xuid, count=MATCHES_PER_PLAYER,
-                                                        match_type="matchmaking")
-            history = await resp.parse()
+            history = await api(client.stats.get_match_history, xuid, count=MATCHES_PER_PLAYER,
+                                match_type="matchmaking")
         except Exception as e:
-            log(f"- {gamertag}: historial no disponible ({e!r}). ¿Es privado?")
+            log(f"- {gamertag}: historial no disponible ({short_err(e)}). ¿Es privado?")
             continue
         log(f"- {gamertag}: {len(history.results)} partidas recientes")
 
@@ -240,11 +274,20 @@ async def collect_candidates(client, members):
                 continue
             if info.playlist is None:
                 continue
-            kind = kind_for_playlist(await asset_name("playlist", info.playlist))
+            playlist_name = await asset_name("playlist", info.playlist)
+            kind = kind_for_playlist(playlist_name)
             if not kind:
                 continue
+            map_raw = await asset_name("map", info.map_variant)
+            variant = await asset_name("variant", info.ugc_game_variant)
+            if "heav" in f"{map_raw} {variant}".lower():
+                kind = "heavies"
 
-            stats = await (await client.stats.get_match_stats(mid)).parse()
+            try:
+                stats = await api(client.stats.get_match_stats, mid)
+            except Exception as e:
+                log(f"  (no pude leer la partida {mid}: {short_err(e)})")
+                continue
             win_team = next((t for t in stats.teams if t.outcome == Outcome.WIN), None)
             if win_team is None:
                 continue
@@ -256,12 +299,11 @@ async def collect_candidates(client, members):
 
             category = info.game_variant_category.name
             mode = MODE_NAMES.get(category)
-            variant = await asset_name("variant", info.ugc_game_variant)
-            if "one flag" in variant.lower():
+            if "one flag" in f"{variant} {map_raw}".lower():
                 mode = "One Flag"
             if not mode:
                 continue
-            mapa = await asset_name("map", info.map_variant)
+            mapa = clean_map_name(map_raw)
             if not mapa:
                 continue
 
@@ -289,17 +331,16 @@ async def resolve_members(client):
     members = {}
     for gt in gamertags:
         try:
-            user = await (await client.profile.get_user_by_gamertag(gt)).parse()
+            user = await api(client.profile.get_user_by_gamertag, gt)
             members[str(user.xuid)] = gt
         except Exception as e:
-            log(f"- No encontré el gamertag '{gt}' en Xbox ({e!r})")
+            log(f"- No encontré el gamertag '{gt}' en Xbox ({short_err(e)}). ¿Lo cambió?")
     return members
 
 
 def notify(text):
     bot_id = os.getenv("GROUPME_BOT_ID")
     if not bot_id or DRY_RUN:
-        log(f"[GroupMe] {text}")
         return
     try:
         requests.post("https://api.groupme.com/v3/bots/post",
@@ -350,7 +391,7 @@ async def main():
         client = HaloInfiniteClient(session=session,
                                     spartan_token=player.spartan_token.token,
                                     clearance_token=player.clearance_token.token,
-                                    requests_per_second=4)
+                                    requests_per_second=2)
         members = await resolve_members(client)
         log(f"{len(members)} miembros encontrados en Xbox")
         candidates = await collect_candidates(client, members)
