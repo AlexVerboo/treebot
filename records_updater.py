@@ -18,6 +18,7 @@ Variables de entorno:
   AZURE_CLIENT_SECRET
   HALO_REFRESH_TOKEN        Se obtiene una vez con get_halo_token.py
   GROUPME_BOT_ID            (opcional) para avisar en el chat
+  ANNOUNCE_RECORDS=1        (opcional) avisar los récords nuevos en GroupMe (apagado por defecto)
   MIN_GROUP_PLAYERS         (opcional, default 5) miembros mínimos en el equipo ganador
   MATCHES_PER_PLAYER        (opcional, default 25) partidas recientes a revisar por miembro
   DRY_RUN=1                 (opcional) solo muestra lo que haría, sin escribir
@@ -37,6 +38,8 @@ import sheets
 MIN_GROUP_PLAYERS = int(os.getenv("MIN_GROUP_PLAYERS", "5"))
 MATCHES_PER_PLAYER = int(os.getenv("MATCHES_PER_PLAYER", "25"))
 DRY_RUN = os.getenv("DRY_RUN", "").lower() in ("1", "true", "yes")
+# Avisos de récords en GroupMe: apagados salvo que la variable del repo ANNOUNCE_RECORDS sea 1
+ANNOUNCE = os.getenv("ANNOUNCE_RECORDS", "").lower() in ("1", "true", "yes")
 MATCH_URL = "https://halotracker.com/halo-infinite/match/{}"
 
 # Nombre del modo como aparece en la hoja, según la categoría que reporta la API
@@ -340,7 +343,7 @@ async def resolve_members(client):
 
 def notify(text):
     bot_id = os.getenv("GROUPME_BOT_ID")
-    if not bot_id or DRY_RUN:
+    if not bot_id or DRY_RUN or not ANNOUNCE:
         return
     try:
         requests.post("https://api.groupme.com/v3/bots/post",

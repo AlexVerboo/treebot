@@ -29,6 +29,7 @@ jobs:
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
           GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
+          ANNOUNCE_RECORDS: ${{ vars.ANNOUNCE_RECORDS || '' }}
           MIN_GROUP_PLAYERS: ${{ vars.MIN_GROUP_PLAYERS || '5' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
       - name: Stats por jugador (página de roles)

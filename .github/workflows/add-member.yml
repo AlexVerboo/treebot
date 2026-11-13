@@ -1,0 +1,28 @@
+name: Add member
+
+on:
+  workflow_dispatch:
+    inputs:
+      gamertag:
+        description: "Gamertag de Xbox del miembro nuevo"
+        required: true
+        type: string
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements-updater.txt
+      - name: Agregar a la hoja
+        run: python add_member.py "$GAMERTAG"
+        env:
+          GAMERTAG: ${{ inputs.gamertag }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
