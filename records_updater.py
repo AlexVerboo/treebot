@@ -18,7 +18,7 @@ Variables de entorno:
   AZURE_CLIENT_SECRET
   HALO_REFRESH_TOKEN        Se obtiene una vez con get_halo_token.py
   GROUPME_BOT_ID            (opcional) para avisar en el chat
-  MIN_GROUP_PLAYERS         (opcional, default 4) miembros mínimos en el equipo ganador
+  MIN_GROUP_PLAYERS         (opcional, default 5) miembros mínimos en el equipo ganador
   MATCHES_PER_PLAYER        (opcional, default 25) partidas recientes a revisar por miembro
   DRY_RUN=1                 (opcional) solo muestra lo que haría, sin escribir
 """
@@ -34,7 +34,7 @@ import requests
 
 import sheets
 
-MIN_GROUP_PLAYERS = int(os.getenv("MIN_GROUP_PLAYERS", "4"))
+MIN_GROUP_PLAYERS = int(os.getenv("MIN_GROUP_PLAYERS", "5"))
 MATCHES_PER_PLAYER = int(os.getenv("MATCHES_PER_PLAYER", "25"))
 DRY_RUN = os.getenv("DRY_RUN", "").lower() in ("1", "true", "yes")
 MATCH_URL = "https://halotracker.com/halo-infinite/match/{}"
