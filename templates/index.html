@@ -72,6 +72,19 @@ a { color: var(--leaf); }
 .member b { font-family: var(--font-display); }
 .empty { padding: 20px; color: var(--muted); }
 footer { color: var(--muted); font-size: 13px; }
+.promo {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; justify-content: space-between;
+  text-decoration: none; color: var(--text);
+  background: linear-gradient(100deg, #1a2a1f, var(--panel) 60%);
+  border: 1px solid var(--leaf); border-radius: 10px; padding: 14px 18px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.promo:hover { transform: translateY(-1px); box-shadow: 0 6px 20px #5fd08a22; }
+.promo .tag { font: 600 11px var(--font-display); letter-spacing: .12em; text-transform: uppercase; color: var(--leaf); }
+.promo b { display: block; font: 700 20px/1.2 var(--font-display); }
+.promo span.desc { color: var(--muted); font-size: 14px; }
+.promo .cta { font: 600 14px var(--font-display); color: var(--sky); background: var(--leaf); border-radius: 99px; padding: 8px 16px; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { .promo { transition: none; } .promo:hover { transform: none; } }
 [hidden] { display: none !important; }
 </style>
 </head>
@@ -81,6 +94,15 @@ footer { color: var(--muted); font-size: 13px; }
     <h1>Trees in <span>Space</span> Records</h1>
     <p class="sub">Halo Infinite team records for Big Team, Squad Battle and Heavies. Times are the fastest wins; Slayer shows the final score.</p>
   </header>
+
+  <a class="promo" href="https://snakemagic.com" target="_blank" rel="noopener">
+    <div>
+      <div class="tag">Sponsored by a Tree</div>
+      <b>Snake Magic</b>
+      <span class="desc">Comedy videos for the internet. A scripted, indie-style comedy series.</span>
+    </div>
+    <span class="cta">Watch at snakemagic.com ↗</span>
+  </a>
 
   <section class="tiles" id="tiles"></section>
 
