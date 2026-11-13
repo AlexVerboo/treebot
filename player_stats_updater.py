@@ -38,6 +38,15 @@ def _secs(td):
     return td.total_seconds() if td else 0
 
 
+def _get(obj, *names):
+    """Lee el primer atributo que exista (los nombres cambian entre versiones de SPNKr)."""
+    for n in names:
+        v = getattr(obj, n, None)
+        if v is not None:
+            return v
+    return 0
+
+
 def compute_row(overall, ctf, zones, ball, seed):
     """overall: ServiceRecord general; ctf/ball/seed: ServiceRecord o None; zones: lista."""
     c = overall.core_stats
@@ -58,7 +67,7 @@ def compute_row(overall, ctf, zones, ball, seed):
         "melee_kills_pg": _div(c.melee_kills, n),
         "max_spree": c.max_killing_spree,
         "callouts_pg": _div(c.callout_assists, n),
-        "obj_pg": _div(c.objectives_completed, n),
+        "obj_pg": _div(c.objectives_completed, n) if hasattr(c, "objectives_completed") else "",
         "driver_assists_pg": _div(c.driver_assists, n),
         "vehicle_destroys_pg": _div(c.vehicle_destroys, n),
         "hijacks_pg": _div(c.hijacks, n),
@@ -81,10 +90,10 @@ def compute_row(overall, ctf, zones, ball, seed):
         zs = z.zones_stats
         zm += z.matches_completed or 0
         if zs:
-            caps += zs.stronghold_captures or 0
-            dk += zs.stronghold_defensive_kills or 0
-            ok += zs.stronghold_offensive_kills or 0
-            zt += _secs(zs.stronghold_occupation_time)
+            caps += _get(zs, "zone_captures", "stronghold_captures")
+            dk += _get(zs, "zone_defensive_kills", "stronghold_defensive_kills")
+            ok += _get(zs, "zone_offensive_kills", "stronghold_offensive_kills")
+            zt += _secs(_get(zs, "total_zone_occupation_time", "stronghold_occupation_time") or None)
     row.update({
         "zone_matches": zm,
         "zone_caps_pg": _div(caps, zm),
@@ -112,7 +121,11 @@ def compute_row(overall, ctf, zones, ball, seed):
 
 
 async def player_row(client, xuid):
-    from spnkr.models.refdata import GameVariantCategory as G
+    from spnkr.models.refdata import GameVariantCategory
+
+    def cat(name):
+        return (getattr(GameVariantCategory, name, None)
+                or getattr(GameVariantCategory, "MULTIPLAYER_" + name))
 
     async def record(category=None):
         try:
@@ -125,12 +138,12 @@ async def player_row(client, xuid):
             return None
 
     overall = await record()
-    ctf = await record(G.MULTIPLAYER_CTF)
-    zones = [z for z in [await record(G.MULTIPLAYER_KING_OF_THE_HILL),
-                         await record(G.MULTIPLAYER_STRONGHOLDS),
-                         await record(G.MULTIPLAYER_TOTAL_CONTROL)] if z]
-    ball = await record(G.MULTIPLAYER_ODDBALL)
-    seed = await record(G.MULTIPLAYER_STOCKPILE)
+    ctf = await record(cat("CTF"))
+    zones = [z for z in [await record(cat("KING_OF_THE_HILL")),
+                         await record(cat("STRONGHOLDS")),
+                         await record(cat("TOTAL_CONTROL"))] if z]
+    ball = await record(cat("ODDBALL"))
+    seed = await record(cat("STOCKPILE"))
     return compute_row(overall, ctf, zones, ball, seed)
 
 
@@ -213,7 +226,7 @@ async def main():
                 rows_by_gt[gt] = await player_row(client, xuid)
                 log(f"- {gt}: {rows_by_gt[gt]['matches']} partidas")
             except Exception as e:
-                log(f"- {gt}: sin stats ({short_err(e)}). ¿Perfil privado?")
+                log(f"- {gt}: sin stats ({short_err(e)}: {e}). ¿Perfil privado?")
 
     book = sheets._get_book()
     gamertags = [r[sheets.COL_GAMERTAG].strip()

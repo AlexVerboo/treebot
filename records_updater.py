@@ -298,7 +298,7 @@ async def collect_candidates(client, members):
                 continue
 
             category = info.game_variant_category.name
-            mode = MODE_NAMES.get(category)
+            mode = MODE_NAMES.get(category) or MODE_NAMES.get("MULTIPLAYER_" + category)
             if "one flag" in f"{variant} {map_raw}".lower():
                 mode = "One Flag"
             if not mode:
