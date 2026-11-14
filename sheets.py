@@ -61,14 +61,20 @@ def _get_book():
     return _book
 
 
-def _values(sheet_name, use_cache=True):
-    """Todas las celdas de una hoja como lista de filas (con caché corta)."""
+def _values(sheet_name, use_cache=True, raw=False):
+    """Todas las celdas de una hoja como lista de filas (con caché corta).
+    raw=True trae los números sin formato (la hoja usa coma decimal: "10,577")."""
     now = time.time()
-    hit = _cache.get(sheet_name)
+    key = (sheet_name, raw)
+    hit = _cache.get(key)
     if use_cache and hit and now - hit[0] < CACHE_SECONDS:
         return hit[1]
-    rows = _get_book().worksheet(sheet_name).get_all_values()
-    _cache[sheet_name] = (now, rows)
+    ws = _get_book().worksheet(sheet_name)
+    if raw:
+        rows = ws.get_all_values(value_render_option="UNFORMATTED_VALUE")
+    else:
+        rows = ws.get_all_values()
+    _cache[key] = (now, rows)
     return rows
 
 
@@ -149,10 +155,10 @@ def get_members():
     return members
 
 
-def _optional_values(sheet_name):
+def _optional_values(sheet_name, raw=False):
     """Como _values, pero devuelve [] si la hoja todavía no existe."""
     try:
-        return _values(sheet_name)
+        return _values(sheet_name, raw=raw)
     except gspread.WorksheetNotFound:
         return []
 
@@ -180,7 +186,7 @@ def get_roles():
 def get_player_stats():
     """Hoja "Player Stats" (la escribe player_stats_updater.py).
     Devuelve ({gamertag: {stat: número}}, fecha de actualización)."""
-    rows = _optional_values(PLAYER_STATS_SHEET)
+    rows = _optional_values(PLAYER_STATS_SHEET, raw=True)
     if not rows:
         return {}, ""
     header = [_clean(h) for h in rows[0]]
@@ -193,8 +199,11 @@ def get_player_stats():
             continue
         row = {}
         for k, v in zip(header[1:], r[1:]):
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                row[k] = float(v)
+                continue
             try:
-                row[k] = float(str(v).replace(",", ""))
+                row[k] = float(str(v).strip().replace(",", "."))
             except ValueError:
                 pass
         stats[_clean(r[0])] = row
@@ -299,6 +308,6 @@ def update_name(old_name, new_name):
     for i, value in enumerate(col, start=1):
         if _clean(value).lower() == old_name.strip().lower():
             ws.update_cell(i, COL_GROUPME_NAME + 1, new_name.strip())
-            _cache.pop(MEMBERS_SHEET, None)
+            _cache.pop((MEMBERS_SHEET, False), None)
             return f"I will update {old_name} to {new_name}"
     return "For starters, I dont know who you are, you may want to add your name to the list"
