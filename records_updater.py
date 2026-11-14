@@ -327,13 +327,48 @@ async def collect_candidates(client, members):
     return candidates
 
 
+XUID_SHEET = "XUIDs"
+
+
+def _xuid_cache():
+    """Hoja "XUIDs" (gamertag | xuid): evita buscar en Xbox a todos cada vez,
+    que es lo más lento (Halo limita mucho esa búsqueda)."""
+    try:
+        rows = sheets._optional_values(XUID_SHEET) or []
+    except Exception:
+        return {}
+    return {r[0].strip().lower(): r[1].strip() for r in rows[1:]
+            if len(r) > 1 and r[0].strip() and r[1].strip()}
+
+
+def _save_xuid_cache(found):
+    if DRY_RUN or not found:
+        return
+    try:
+        book = sheets._get_book()
+        try:
+            ws = book.worksheet(XUID_SHEET)
+        except Exception:
+            ws = book.add_worksheet(XUID_SHEET, rows=100, cols=2)
+        rows = [["gamertag", "xuid"]] + sorted([gt, x] for x, gt in found.items())
+        ws.clear()
+        ws.update(range_name="A1", values=rows, value_input_option="RAW")
+    except Exception as e:
+        log(f"(no pude guardar la hoja {XUID_SHEET}: {short_err(e)})")
+
+
 async def resolve_members(client):
     rows = sheets._values(sheets.MEMBERS_SHEET, use_cache=False)
     gamertags = [r[sheets.COL_GAMERTAG].strip() for r in rows
                  if len(r) > sheets.COL_GAMERTAG and r[sheets.COL_GAMERTAG].strip()]
-    members, pending = {}, list(gamertags)
+    cache = _xuid_cache()
+    members = {cache[gt.lower()]: gt for gt in gamertags if gt.lower() in cache}
+    pending = [gt for gt in gamertags if gt.lower() not in cache]
+    failed = []
     # Halo a veces responde 429 un rato seguido; los que fallen así se reintentan al final
     for round_ in range(3):
+        if not pending:
+            break
         if round_:
             log(f"  Reintentando {len(pending)} gamertag(s) en 60 s...")
             await asyncio.sleep(60)
@@ -348,10 +383,10 @@ async def resolve_members(client):
                 else:
                     failed.append((gt, e))
         pending = [gt for gt, _ in failed]
-        if not pending:
-            break
     for gt, e in failed:
         log(f"- No pude buscar el gamertag '{gt}' ({short_err(e)}); Halo no respondió")
+    if len(members) != len(cache) or any(cache.get(gt.lower()) != x for x, gt in members.items()):
+        _save_xuid_cache(members)
     return members
 
 

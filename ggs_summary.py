@@ -18,6 +18,7 @@ Requiere Python 3.11+ (SPNKr).
 import asyncio
 import datetime as dt
 import os
+import re
 import sys
 
 import requests
@@ -109,9 +110,13 @@ async def build_summary(client, members, since):
         outcome = team.outcome if team else squad[0].outcome
         mine = team.stats.core_stats.score if team else 0
         theirs = max((t.stats.core_stats.score for t in others), default=0)
+        raw_map = await map_name(info.map_variant)
+        ranked = "ranked" in raw_map.lower()
+        raw_map = re.sub(r"\s*-\s*ranked\b.*$", "", raw_map, flags=re.I)
         games.append({
+            "ranked": ranked,
             "win": outcome == Outcome.WIN, "tie": outcome == Outcome.TIE,
-            "map": clean_map_name(await map_name(info.map_variant)), "mode": mode,
+            "map": clean_map_name(raw_map), "mode": mode,
             "score": f"{mine}-{theirs}",
         })
 
@@ -142,25 +147,33 @@ def format_summary(games, totals):
     out = [f"🌴 GGs! Tonight's recap: {len(games)} games, {record}", ""]
     for g in games[-15:]:
         icon = "✅" if g["win"] else ("➖" if g["tie"] else "❌")
-        out.append(f"{icon} {g['mode']} on {g['map']} ({g['score']})")
+        ranked = " (Ranked)" if g["ranked"] else ""
+        out.append(f"{icon} {g['mode']} on {g['map']}{ranked} ({g['score']})")
     if len(games) > 15:
         out.append(f"…and {len(games) - 15} earlier games")
 
-    if totals:
-        def kd(t):
-            return t["kills"] / max(t["deaths"], 1)
-        most = lambda key: max(totals.items(), key=lambda kv: kv[1][key])
+    # Líderes por promedio por partida (no por total, para no premiar solo al que jugó más),
+    # entre los que jugaron al menos la mitad de las partidas de la noche
+    min_games = max(1, (len(games) + 1) // 2)
+    regulars = {gt: t for gt, t in totals.items() if t["games"] >= min_games}
+    if regulars:
+        def per_game(t, key):
+            return t[key] / t["games"]
+
+        def best(fn):
+            return max(regulars.items(), key=lambda kv: fn(kv[1]))
+
         out.append("")
-        gt, t = most("kills")
-        out.append(f"🔥 Most kills: {gt} ({t['kills']})")
-        gt, t = max(totals.items(), key=lambda kv: (kv[1]["games"] >= 2, kd(kv[1])))
-        out.append(f"🎯 Best K/D: {gt} ({kd(t):.2f})")
-        gt, t = most("assists")
-        out.append(f"🤝 Most assists: {gt} ({t['assists']})")
-        gt, t = most("damage")
-        out.append(f"💥 Most damage: {gt} ({t['damage']:,})")
-        gt, t = most("deaths")
-        out.append(f"💀 Most deaths: {gt} ({t['deaths']}) — thanks for your sacrifice")
+        gt, t = best(lambda t: per_game(t, "kills"))
+        out.append(f"🔥 Most kills: {gt} ({per_game(t, 'kills'):.1f}/game)")
+        gt, t = best(lambda t: t["kills"] / max(t["deaths"], 1))
+        out.append(f"🎯 Best K/D: {gt} ({t['kills'] / max(t['deaths'], 1):.2f})")
+        gt, t = best(lambda t: per_game(t, "assists"))
+        out.append(f"🤝 Most assists: {gt} ({per_game(t, 'assists'):.1f}/game)")
+        gt, t = best(lambda t: per_game(t, "damage"))
+        out.append(f"💥 Most damage: {gt} ({per_game(t, 'damage'):,.0f}/game)")
+        gt, t = best(lambda t: per_game(t, "deaths"))
+        out.append(f"💀 Most deaths: {gt} ({per_game(t, 'deaths'):.1f}/game) — thanks for your sacrifice")
     return "\n".join(out)
 
 
@@ -179,6 +192,8 @@ async def main():
                                     requests_per_second=4)
         members = await resolve_members(client)
         games, totals = await build_summary(client, members, since)
+    for gt, t in sorted(totals.items(), key=lambda kv: -kv[1]["games"]):
+        log(f"  {gt}: {t}")
     post(format_summary(games, totals))
 
 
