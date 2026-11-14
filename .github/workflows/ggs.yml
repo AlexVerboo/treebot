@@ -1,0 +1,43 @@
+name: GGs summary
+
+# Lo arranca el bot (app.py) cuando alguien escribe "ggs" en GroupMe.
+# También se puede correr a mano desde Actions.
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Horas hacia atrás que cuentan como 'esta noche'"
+        default: "10"
+        type: string
+      dry_run:
+        description: "Solo mostrar el resumen, sin mandarlo a GroupMe"
+        type: boolean
+        default: false
+
+concurrency:
+  group: ggs
+  cancel-in-progress: false
+
+jobs:
+  ggs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-updater.txt
+      - run: pip install -r requirements-updater.txt
+      - name: Resumen de la noche
+        run: python ggs_summary.py
+        env:
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
+          GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
+          GGS_HOURS: ${{ inputs.hours || '10' }}
+          GGS_MIN_PLAYERS: ${{ vars.GGS_MIN_PLAYERS || '2' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}

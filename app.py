@@ -70,6 +70,7 @@ def show_help():
         "- random! → Random image from the archive\n"
         "- mystats! → Your stats\n"
         "- daysoff! → Days off\n"
+        "- ggs → Tonight's recap (wins, losses, top players)\n"
         "- menu! / help → This list"
     )
 
@@ -82,6 +83,33 @@ def safe(fn):
             log(f"Error en {fn.__name__}: {e!r}")
             return send_message("My spreadsheet brain is not working right now 🌴🔥 try later")
     return wrapper
+
+# ===== ggs: resumen de la noche =====
+# El resumen necesita la API de Halo (SPNKr, Python 3.11+), que no corre en Render,
+# así que el bot arranca el workflow "GGs summary" de GitHub y ese manda el resumen.
+GH_DISPATCH_TOKEN = os.getenv("GH_DISPATCH_TOKEN")
+GH_REPO = os.getenv("GH_REPO", "AlexVerboo/treebot")
+GGS_COOLDOWN = 300  # segundos entre resúmenes, para que no lo spameen
+_last_ggs = [0.0]
+
+def cmd_ggs():
+    if not GH_DISPATCH_TOKEN:
+        log("ggs: falta GH_DISPATCH_TOKEN en Render")
+        return send_message("GGs! 🌴 (my boss still has to plug in the recap thing)")
+    if time.time() - _last_ggs[0] < GGS_COOLDOWN:
+        return send_message("Hold on, I'm already counting tonight's games 🌴🧮")
+    try:
+        r = requests.post(
+            f"https://api.github.com/repos/{GH_REPO}/actions/workflows/ggs.yml/dispatches",
+            headers={"Authorization": f"Bearer {GH_DISPATCH_TOKEN}",
+                     "Accept": "application/vnd.github+json"},
+            json={"ref": "master"}, timeout=10)
+        r.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        log(f"ggs: no pude arrancar el workflow: {e!r}")
+        return send_message("GGs! 🌴 (I couldn't get tonight's recap, try later)")
+    _last_ggs[0] = time.time()
+    return send_message("GGs! 🌴 Counting tonight's games, give me a minute or two...")
 
 @safe
 def cmd_records(kind, query):
@@ -254,6 +282,8 @@ def webhook():
         "random!": lambda: cmd_random_image(),
         "mystats!": lambda: cmd_mystats(sender_id),
         "daysoff!": lambda: cmd_daysoff(),
+        "ggs": lambda: cmd_ggs(),
+        "ggs!": lambda: cmd_ggs(),
         "butthole!": lambda: send_message("you have reached the butthole limit of the month"),
         "menu!": lambda: send_message(show_help()),
         "menu": lambda: send_message(show_help()),
