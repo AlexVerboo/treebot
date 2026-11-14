@@ -342,7 +342,7 @@ def _xuid_cache():
 
 
 def _save_xuid_cache(found):
-    if DRY_RUN or not found:
+    if not found:  # es solo un caché: se guarda aunque sea DRY_RUN
         return
     try:
         book = sheets._get_book()
