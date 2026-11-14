@@ -206,12 +206,12 @@ class RecordSheet:
 async def api(fn, *args, **kwargs):
     """Llama a la API y la parsea; reintenta si Halo responde 429 (demasiadas peticiones) o 5xx."""
     from aiohttp import ClientResponseError
-    for attempt in range(6):
+    for attempt in range(8):
         try:
             return await (await fn(*args, **kwargs)).parse()
         except ClientResponseError as e:
             if e.status == 429 or e.status >= 500:
-                wait = 2 ** attempt
+                wait = min(2 ** attempt, 60)
                 try:
                     wait = max(wait, float((e.headers or {}).get("Retry-After", 0)))
                 except (TypeError, ValueError):
@@ -331,13 +331,27 @@ async def resolve_members(client):
     rows = sheets._values(sheets.MEMBERS_SHEET, use_cache=False)
     gamertags = [r[sheets.COL_GAMERTAG].strip() for r in rows
                  if len(r) > sheets.COL_GAMERTAG and r[sheets.COL_GAMERTAG].strip()]
-    members = {}
-    for gt in gamertags:
-        try:
-            user = await api(client.profile.get_user_by_gamertag, gt)
-            members[str(user.xuid)] = gt
-        except Exception as e:
-            log(f"- No encontré el gamertag '{gt}' en Xbox ({short_err(e)}). ¿Lo cambió?")
+    members, pending = {}, list(gamertags)
+    # Halo a veces responde 429 un rato seguido; los que fallen así se reintentan al final
+    for round_ in range(3):
+        if round_:
+            log(f"  Reintentando {len(pending)} gamertag(s) en 60 s...")
+            await asyncio.sleep(60)
+        failed = []
+        for gt in pending:
+            try:
+                user = await api(client.profile.get_user_by_gamertag, gt)
+                members[str(user.xuid)] = gt
+            except Exception as e:
+                if getattr(e, "status", None) == 404:
+                    log(f"- No encontré el gamertag '{gt}' en Xbox (HTTP 404). ¿Lo cambió?")
+                else:
+                    failed.append((gt, e))
+        pending = [gt for gt, _ in failed]
+        if not pending:
+            break
+    for gt, e in failed:
+        log(f"- No pude buscar el gamertag '{gt}' ({short_err(e)}); Halo no respondió")
     return members
 
 
