@@ -87,7 +87,7 @@ def safe(fn):
 # ===== ggs: resumen de la noche =====
 # El resumen necesita la API de Halo (SPNKr, Python 3.11+), que no corre en Render,
 # así que el bot arranca el workflow "GGs summary" de GitHub y ese manda el resumen.
-GH_DISPATCH_TOKEN = os.getenv("GH_DISPATCH_TOKEN")
+GH_DISPATCH_TOKEN = (os.getenv("GH_DISPATCH_TOKEN") or "").strip()
 GH_REPO = os.getenv("GH_REPO", "AlexVerboo/treebot")
 GGS_COOLDOWN = 300  # segundos entre resúmenes, para que no lo spameen
 _last_ggs = [0.0]
