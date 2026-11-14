@@ -280,20 +280,43 @@ def personal_stats(sender_id):
     if not gamertag:
         return "I dont see your name on the Stats list. Tell my boss to update his shit.... NEXT!!!"
 
-    # Columnas C:I traen las stats; si la fórmula de halotracker falla salen como #VALUE!
-    header = (rows[1] + [""] * 9)[2:9] if len(rows) > 1 else []
-    for r in rows[2:]:
-        cells = (r + [""] * 9)[2:9]
-        if _clean(cells[0]).lower() == gamertag.lower():
-            out = f"These are the stats for {gamertag}\n"
-            for h, v in zip(header, cells):
-                out += f"{h} ➡️ {v}\n"
-            return out
+    # Stats de por vida de matchmaking (hoja "Player Stats", la llena el workflow diario)
+    stats, updated = get_player_stats()
+    key = gamertag.lower().replace(" ", "")
+    row = next((v for gt, v in stats.items() if gt.lower().replace(" ", "") == key), None)
+    if row:
+        return _format_personal_stats(gamertag, row, updated)
 
     profile = _profile_for(gamertag, [_clean(r[COL_PROFILE_URL]) for r in rows[2:]
                                       if len(r) > COL_PROFILE_URL])
-    return (f"{gamertag}, the stats table is broken right now (halotracker stopped feeding the sheet). "
+    return (f"I don't have stats for {gamertag} yet (they update once a day). "
             f"Check your profile here: {profile}")
+
+
+_MYSTATS = ["matches", "win_pct", "kd", "kda", "kills_pg", "deaths_pg", "assists_pg",
+            "dmg_pg", "accuracy", "headshot_pct", "max_spree", "caps_pg", "zone_caps_pg"]
+
+
+def _format_personal_stats(gamertag, row, updated):
+    import roles
+    out = f"These are the stats for {gamertag} (matchmaking, lifetime)\n"
+    for k in _MYSTATS:
+        if k not in row or k not in roles.STATS:
+            continue
+        label, fmt, _ = roles.STATS[k]
+        v = row[k]
+        if fmt == "i":
+            txt = f"{int(round(v)):,}"
+        elif fmt == "pct":
+            txt = f"{v * 100:.1f}%"
+        elif fmt == "time":
+            txt = f"{int(v) // 60}:{int(v) % 60:02d}"
+        else:
+            txt = f"{v:.2f}"
+        out += f"{label} ➡️ {txt}\n"
+    if updated:
+        out += f"Updated: {updated}"
+    return out
 
 
 def days_off():
