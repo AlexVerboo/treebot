@@ -56,21 +56,21 @@ def send_image(msg, imageurl):
 
 def show_help():
     return (
-        "📖 Comandos disponibles:\n"
-        "- bot? → Saluda\n"
-        "- rules! → Muestra las reglas\n"
-        "- back out → Mensaje de salida\n"
-        "- settings! → Ajustes del control\n"
-        "- that's it for me boys / bye bye → Despedida\n"
-        "- who is the best at halo? → Da un nombre (al azar)\n"
-        "- do you speak spanish? → Responde si habla español\n"
-        "- records! <mapa o modo> → Records de Big Team\n"
-        "- squadrecords! <mapa o modo> → Records de Squad Battle\n"
-        "- heavyrecords! <mapa o modo> → Records de Heavies\n"
-        "- random! → Imagen al azar del archivo\n"
-        "- mystats! → Tus estadísticas\n"
-        "- daysoff! → Días libres\n"
-        "- menu! / help → Esta lista"
+        "📖 Available commands:\n"
+        "- bot? → Says hi\n"
+        "- rules! → Shows the group rules\n"
+        "- back out → Exit message\n"
+        "- settings! → Controller settings\n"
+        "- that's it for me boys / bye bye → Says goodbye\n"
+        "- who is the best at halo? → Picks a name (at random)\n"
+        "- do you speak spanish? → Find out if the bot speaks Spanish\n"
+        "- records! <map or mode> → Big Team records\n"
+        "- squadrecords! <map or mode> → Squad Battle records\n"
+        "- heavyrecords! <map or mode> → Heavies records\n"
+        "- random! → Random image from the archive\n"
+        "- mystats! → Your stats\n"
+        "- daysoff! → Days off\n"
+        "- menu! / help → This list"
     )
 
 def safe(fn):
