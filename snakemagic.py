@@ -9,7 +9,9 @@ import time
 
 import requests
 
-SITE_URL = "https://snakemagic.com/"
+# http:// funciona siempre: mientras GitHub emite el certificado HTTPS carga directo,
+# y cuando se active "Enforce HTTPS" redirige solo a https://.
+SITE_URL = "http://snakemagic.com/"
 # Respaldo por si el dominio no responde: el mismo index.html en GitHub
 FALLBACK_URL = "https://raw.githubusercontent.com/snakemagic/snakemagic.github.io/main/index.html"
 CACHE_SECONDS = 3600
@@ -71,4 +73,4 @@ def random_video():
     if not videos:
         return None
     v = random.choice(videos)
-    return f"🐍🧙 Snake Magic presents: {v['title']} ({v['dur']})\n{v['url']}\nMore at snakemagic.com"
+    return f"🐍🧙 Snake Magic presents: {v['title']} ({v['dur']})\n{v['url']}\nMore at {SITE_URL}"
