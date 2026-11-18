@@ -13,6 +13,7 @@ from flask import Flask, request, jsonify, render_template
 
 import sheets
 import roles
+import snakemagic
 
 # ==============================
 # CONFIGURACIÓN DEL BOT
@@ -68,6 +69,7 @@ def show_help():
         "- squadrecords! <map or mode> → Squad Battle records\n"
         "- heavyrecords! <map or mode> → Heavies records\n"
         "- random! → Random image from the archive\n"
+        "- snakemagic! → Random video from snakemagic.com\n"
         "- mystats! → Your stats\n"
         "- daysoff! → Days off\n"
         "- ggs → Tonight's recap (wins, losses, top players)\n"
@@ -119,6 +121,12 @@ def cmd_records(kind, query):
 def cmd_random_image():
     n, url = sheets.random_image()
     return send_image(f"Picking Random Image No{n} from Trees in Spaces Archive", url)
+
+def cmd_snakemagic():
+    msg = snakemagic.random_video()
+    if not msg:
+        return send_message("The snake is sleeping right now 🐍💤 try later (snakemagic.com)")
+    return send_message(msg)
 
 @safe
 def cmd_mystats(sender_id):
@@ -280,6 +288,8 @@ def webhook():
         "who is the best at halo?": lambda: send_message(random.choice(trees)),
         "what does ftbb mean?": lambda: send_message(random.choice(ftbb)),
         "random!": lambda: cmd_random_image(),
+        "snakemagic!": lambda: cmd_snakemagic(),
+        "snake!": lambda: cmd_snakemagic(),
         "mystats!": lambda: cmd_mystats(sender_id),
         "daysoff!": lambda: cmd_daysoff(),
         "ggs": lambda: cmd_ggs(),
