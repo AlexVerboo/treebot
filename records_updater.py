@@ -433,12 +433,13 @@ def announce(changes):
 
 async def main():
     from aiohttp import ClientSession
-    from spnkr import AzureApp, HaloInfiniteClient, refresh_player_tokens
+    from spnkr import AzureApp, HaloInfiniteClient
+    import halo_auth
 
     app = AzureApp(os.environ["AZURE_CLIENT_ID"], os.environ["AZURE_CLIENT_SECRET"],
                    "https://localhost")
     async with ClientSession() as session:
-        player = await refresh_player_tokens(session, app, os.environ["HALO_REFRESH_TOKEN"])
+        player = await halo_auth.login(session, app)
         log(f"Sesión de Halo iniciada como {player.gamertag}")
         client = HaloInfiniteClient(session=session,
                                     spartan_token=player.spartan_token.token,

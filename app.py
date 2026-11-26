@@ -4,15 +4,20 @@
 import os
 import re
 import sys
+import hmac
 import json
 import random
 import time
+import platform
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 
 import requests
 from flask import Flask, request, jsonify, render_template
 
+import alerts
 import sheets
 import roles
+import scheduler
 import snakemagic
 
 # ==============================
@@ -23,6 +28,18 @@ app = Flask(__name__)
 GROUPME_API_URL = 'https://api.groupme.com/v3/bots/post'
 GROUPME_BOT_ID = os.getenv("GROUPME_BOT_ID")
 BOT_NAME = os.getenv("BOT_NAME", "Wild Palm Tree")
+VERSION = "2.0.0-dev"
+STARTED_AT = time.time()
+
+# Secret in the GroupMe callback URL (https://.../?token=...). GroupMe does not
+# sign its callbacks, so without this anyone who knows the URL could make the bot post.
+# If WEBHOOK_TOKEN is not set, every POST is accepted (same as v1.0).
+WEBHOOK_TOKEN = (os.getenv("WEBHOOK_TOKEN") or "").strip()
+
+# Messages are processed in the background: GroupMe gets its "200 OK" right away
+# and the bot answers a moment later. Two threads are enough for the group.
+_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="cmd")
+_side_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="side")
 
 # ==============================
 # FUNCIONES DE ENVÍO DE MENSAJES
@@ -31,15 +48,21 @@ def log(msg):
     print(str(msg))
     sys.stdout.flush()
 
-def _post_to_groupme(data):
-    """Función interna para enviar cualquier payload al bot."""
-    try:
-        response = requests.post(GROUPME_API_URL, json=data, timeout=10)
-        response.raise_for_status()
-        return True
-    except requests.exceptions.RequestException as e:
-        log(f"Error enviando mensaje a GroupMe: {e}")
-        return False
+def _post_to_groupme(data, attempts=3):
+    """Sends any payload to the bot. Retries on network errors, 429 and 5xx."""
+    for attempt in range(1, attempts + 1):
+        try:
+            response = requests.post(GROUPME_API_URL, json=data, timeout=10)
+            if response.status_code == 429 or response.status_code >= 500:
+                raise requests.exceptions.HTTPError(f"GroupMe answered {response.status_code}")
+            response.raise_for_status()
+            return True
+        except requests.exceptions.RequestException as e:
+            log(f"Error sending to GroupMe (attempt {attempt}/{attempts}): {e}")
+            if attempt < attempts:
+                time.sleep(attempt)
+    alerts.send("GroupMe rejected a bot message 3 times in a row.", key="groupme-post")
+    return False
 
 def send_message(msg):
     # GroupMe corta los mensajes de más de 1000 caracteres
@@ -83,6 +106,8 @@ def safe(fn):
             return fn(*args, **kwargs)
         except Exception as e:
             log(f"Error en {fn.__name__}: {e!r}")
+            alerts.send(f"`{fn.__name__}` failed reading Google Sheets: {type(e).__name__}: {str(e)[:200]}",
+                        key=f"sheets-{fn.__name__}")
             return send_message("My spreadsheet brain is not working right now 🌴🔥 try later")
     return wrapper
 
@@ -204,27 +229,83 @@ def roles_page():
 def api_roles():
     return jsonify(roles_data())
 
+def _check_sheets():
+    sheets._values(sheets.MEMBERS_SHEET)  # uses the 5-minute cache
+    return "ok"
+
+
 @app.route("/health", methods=['GET'])
 def health():
-    return "Trees in Space!", 200
+    """Light check for the uptime monitor and Render. /health?deep=1 also checks Google Sheets.
+    Always answers 200 while the bot process is alive; a failing check shows as "degraded"."""
+    body = {
+        "status": "ok",
+        "version": VERSION,
+        "python": platform.python_version(),
+        "uptime_s": int(time.time() - STARTED_AT),
+        "checks": {
+            "groupme_bot_id": "ok" if GROUPME_BOT_ID else "missing",
+            "webhook_token": "on" if WEBHOOK_TOKEN else "off",
+            "alerts": "on" if os.getenv("DISCORD_ALERT_WEBHOOK") else "off",
+            "daily_scheduler": "on" if os.getenv("GH_DISPATCH_TOKEN") else "off",
+        },
+    }
+    if request.args.get("deep"):
+        try:
+            body["checks"]["sheets"] = _side_executor.submit(_check_sheets).result(timeout=8)
+        except FutureTimeout:
+            body["checks"]["sheets"] = "timeout"
+        except Exception as e:
+            body["checks"]["sheets"] = f"error: {type(e).__name__}"
+    if any(v not in ("ok", "on", "off") for v in body["checks"].values()):
+        body["status"] = "degraded"
+    return jsonify(body), 200
+
+
+@app.before_request
+def _daily_job_check():
+    """On every request (the uptime monitor pings every 5 min), check in the
+    background whether today's records job still has to be started."""
+    _side_executor.submit(scheduler.maybe_run)
 
 # ==============================
 # WEBHOOK DE GROUPME
 # ==============================
 @app.route('/', methods=['POST'])
 def webhook():
+    if WEBHOOK_TOKEN and not hmac.compare_digest(request.args.get("token", ""), WEBHOOK_TOKEN):
+        log("Webhook rejected: wrong or missing token")
+        return "forbidden", 403
+
     data = request.get_json(silent=True) or {}
+    log(f"Recieved {data}")
+
+    # ===== Ignorar respuestas del propio bot =====
+    if data.get('sender_type') == 'bot' or data.get('name', '') == BOT_NAME:
+        return "ok", 200
+
+    # Answer GroupMe right away; the command runs in the background.
+    _executor.submit(_handle_safely, data)
+    return "ok", 200
+
+
+def _handle_safely(data):
+    try:
+        handle_message(data)
+    except Exception as e:
+        log(f"Error handling message: {e!r}")
+        alerts.send(f"The bot failed handling `{(data.get('text') or '')[:80]}`: "
+                    f"{type(e).__name__}: {str(e)[:200]}", key="handle-message")
+
+
+def handle_message(data):
+    """Everything the bot does with a GroupMe message (same behavior as v1.0)."""
     originaldata = data.get('text') or ''
     text = normalize(originaldata)
     name = data.get('name', '')
     sender_id = data.get('sender_id', '')
 
-    log(f"Recieved {data}")
-
-    # ===== Ignorar respuestas del propio bot =====
-    if data.get('sender_type') == 'bot' or name == BOT_NAME:
-        return "ok", 200
-
+    # Small pause so the answer shows up after the member's message
     time.sleep(1)
 
     byebye = [
@@ -317,8 +398,6 @@ def webhook():
             if text.startswith(prefix):
                 cmd_records(kind, text[len(prefix):])
                 break
-
-    return "ok", 200
 
 # ==============================
 # FIN DEL ARCHIVO

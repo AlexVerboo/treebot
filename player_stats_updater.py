@@ -248,7 +248,44 @@ async def last_match_time(client, xuid):
     return info.end_time or info.start_time
 
 
-def write_stats(book, rows_by_gt):
+def previous_rows(book):
+    """What "Player Stats" has right now ({gamertag: {stat: value}}), to keep
+    yesterday's numbers for anyone Halo fails to answer for today."""
+    try:
+        rows = book.worksheet(STATS_SHEET).get_all_values(value_render_option="UNFORMATTED_VALUE")
+    except Exception as e:  # sheet missing or Google error: start from scratch
+        log(f"(No pude leer {STATS_SHEET} anterior: {short_err(e)})")
+        return {}
+    if not rows:
+        return {}
+    header = [str(h).strip() for h in rows[0]]
+    out = {}
+    for r in rows[1:]:
+        gt = str(r[0]).strip() if r else ""
+        if not gt or gt.lower() == "updated":
+            continue
+        out[gt] = dict(zip(header[1:], r[1:]))
+    return out
+
+
+def merge_with_previous(rows_by_gt, previous, member_gamertags):
+    """Adds the previous row of current members that failed today."""
+    merged = dict(rows_by_gt)
+    current = {gt.lower() for gt in rows_by_gt}
+    members = {gt.lower() for gt in member_gamertags}
+    kept = []
+    for gt, row in previous.items():
+        if gt.lower() in members and gt.lower() not in current:
+            merged[gt] = {k: row.get(k, 0) for k in KEYS}
+            kept.append(gt)
+    return merged, kept
+
+
+def write_stats(book, rows_by_gt, member_gamertags=()):
+    previous = previous_rows(book) if not DRY_RUN else {}
+    rows_by_gt, kept = merge_with_previous(rows_by_gt, previous, member_gamertags)
+    if kept:
+        log(f"Conservo los datos de ayer de: {', '.join(kept)}")
     header = ["gamertag"] + KEYS
     values = [header] + [[gt] + [row.get(k, 0) for k in KEYS] for gt, row in rows_by_gt.items()]
     stamp = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -258,20 +295,29 @@ def write_stats(book, rows_by_gt):
             log(v)
         log(f"(DRY RUN) Escribiría {len(rows_by_gt)} jugadores en {STATS_SHEET}")
         return
+    if len(rows_by_gt) == 0:
+        log(f"Nadie tiene stats hoy: no toco {STATS_SHEET}")
+        return
     ws, _ = _worksheet(book, STATS_SHEET, len(values) + 10, len(header) + 2)
-    ws.clear()
+    # Write first, then erase leftovers: if anything fails halfway, the sheet is
+    # never left empty (before it was clear() + update()).
+    if ws.row_count < len(values):
+        ws.add_rows(len(values) - ws.row_count)
     ws.update(range_name="A1", values=values, value_input_option="RAW")
+    if ws.row_count > len(values):
+        ws.batch_clear([f"A{len(values) + 1}:ZZ{ws.row_count}"])
     log(f"Hoja {STATS_SHEET}: {len(rows_by_gt)} jugadores")
 
 
 async def main():
     from aiohttp import ClientSession
-    from spnkr import AzureApp, HaloInfiniteClient, refresh_player_tokens
+    from spnkr import AzureApp, HaloInfiniteClient
+    import halo_auth
 
     app = AzureApp(os.environ["AZURE_CLIENT_ID"], os.environ["AZURE_CLIENT_SECRET"],
                    "https://localhost")
     async with ClientSession() as session:
-        player = await refresh_player_tokens(session, app, os.environ["HALO_REFRESH_TOKEN"])
+        player = await halo_auth.login(session, app)
         log(f"Sesión de Halo iniciada como {player.gamertag}")
         client = HaloInfiniteClient(session=session,
                                     spartan_token=player.spartan_token.token,
@@ -292,7 +338,7 @@ async def main():
                  for r in sheets._values(sheets.MEMBERS_SHEET, use_cache=False)
                  if len(r) > sheets.COL_GAMERTAG and r[sheets.COL_GAMERTAG].strip()]
     ensure_roles_sheet(book, gamertags, last_played)
-    write_stats(book, rows_by_gt)
+    write_stats(book, rows_by_gt, gamertags)
 
 
 if __name__ == "__main__":
