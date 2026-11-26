@@ -17,12 +17,13 @@ from player_stats_updater import ensure_roles_sheet
 
 async def xbox_gamertag(gamertag):
     from aiohttp import ClientSession
-    from spnkr import AzureApp, HaloInfiniteClient, refresh_player_tokens
+    from spnkr import AzureApp, HaloInfiniteClient
+    import halo_auth
 
     app = AzureApp(os.environ["AZURE_CLIENT_ID"], os.environ["AZURE_CLIENT_SECRET"],
                    "https://localhost")
     async with ClientSession() as session:
-        player = await refresh_player_tokens(session, app, os.environ["HALO_REFRESH_TOKEN"])
+        player = await halo_auth.login(session, app)
         client = HaloInfiniteClient(session=session,
                                     spartan_token=player.spartan_token.token,
                                     clearance_token=player.clearance_token.token)

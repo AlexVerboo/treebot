@@ -10,7 +10,7 @@ TreeBot is the bot and web portal for **Trees in Space**, a Halo Infinite player
 
 | Layer | Technology |
 |---|---|
-| Language | Python (web bot on Render; automation scripts on Python 3.11) |
+| Language | Python 3.11 (web bot on Render and automation scripts) |
 | Web / bot | Flask, Gunicorn, Jinja2 templates |
 | Data | Google Sheets (`gspread` + a Google Cloud service account) |
 | External APIs | Halo Infinite (unofficial API via [SPNKr](https://pypi.org/project/spnkr/)), Xbox Live (auth through a Microsoft Entra ID app), GroupMe Bots API, GitHub REST API (`workflow_dispatch`) |
@@ -56,6 +56,7 @@ flowchart LR
 | [**Update Halo records**](.github/workflows/update-records.yml) | `schedule` (daily cron, 00:17 Mexico City time) and `workflow_dispatch` with a *dry run* option | Step 1: finds new group records. Step 2 (runs even if step 1 fails): computes per-player stats and sorts the roles sheet by last match played | Updated records, player stats and roles sheets; optional GroupMe announcement |
 | [**GGs summary**](.github/workflows/ggs.yml) | `workflow_dispatch`: triggered by the bot via the GitHub API, or run manually (look-back hours, *dry run*) | Collects recent games with 2+ members on the same team and builds the recap | GroupMe message. Uses `concurrency` to avoid overlapping runs; the bot enforces a 5‑min cooldown |
 | [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag input) | Validates the gamertag against Xbox and adds the member | New row in the members sheet |
+| [**Tests**](.github/workflows/tests.yml) | Every pull request and every push to `master` | Runs the `pytest` suite | Pass/fail check on the PR |
 
 All workflows run on `ubuntu-latest` with Python 3.11, pinned dependencies ([`requirements-updater.txt`](requirements-updater.txt)) and credentials from GitHub Secrets. The web bot is hosted separately on Render.
 
@@ -77,6 +78,18 @@ flowchart TD
     MAN3[Manual + gamertag] --> AM[Add member]
     AM --> SH
 ```
+
+## Operations (v2.0)
+
+Version 2.0 is in progress; see [CHANGELOG.md](CHANGELOG.md). What keeps the system running:
+
+- **Health:** `GET /health` returns JSON (version, Python, uptime, which features are configured). `GET /health?deep=1` also checks Google Sheets. An external uptime monitor pings `/health` every 5 minutes, which also keeps the free Render instance awake.
+- **Daily job on time:** the bot starts **Update Halo records** at 00:17 Mexico City through the GitHub API ([`scheduler.py`](scheduler.py)). GitHub's cron is only a backup and skips itself if the job already ran that day.
+- **Alerts:** failures go to the private Discord channel `#bot-alerts` ([`alerts.py`](alerts.py)): failed workflows, Halo login errors, Sheets errors and bot crashes.
+- **Halo token renewal:** [`halo_auth.py`](halo_auth.py) saves the refresh token Microsoft returns on every login back into the `HALO_REFRESH_TOKEN` secret, so it does not expire after ~90 days. If the login ever fails, run `python get_halo_token.py` and update the secret.
+- **Webhook secret:** if `WEBHOOK_TOKEN` is set on Render, the GroupMe callback URL must end in `?token=<value>`.
+- **Configuration:** every environment variable is listed in [`.env.example`](.env.example).
+- **Tests:** `pip install -r requirements.txt -r requirements-updater.txt pytest` and `python -m pytest`.
 
 ## Challenges and technical decisions
 
@@ -107,7 +120,7 @@ TreeBot es el bot y portal web de **Trees in Space**, una comunidad de jugadores
 
 | Capa | Tecnología |
 |---|---|
-| Lenguaje | Python (bot web en Render; scripts de automatización en Python 3.11) |
+| Lenguaje | Python 3.11 (bot web en Render y scripts de automatización) |
 | Web / bot | Flask, Gunicorn, plantillas Jinja2 |
 | Datos | Google Sheets (`gspread` + cuenta de servicio de Google Cloud) |
 | APIs externas | Halo Infinite (API no oficial con [SPNKr](https://pypi.org/project/spnkr/)), Xbox Live (autenticación con una app de Microsoft Entra ID), GroupMe Bots API, GitHub REST API (`workflow_dispatch`) |
@@ -140,8 +153,21 @@ Los diagramas de arquitectura y del pipeline están en la sección en inglés.
 | [**Update Halo records**](.github/workflows/update-records.yml) | `schedule` (cron diario, 00:17 hora de CDMX) y `workflow_dispatch` con opción *dry run* | Paso 1: busca récords nuevos del grupo. Paso 2 (corre aunque falle el 1): calcula estadísticas por jugador y ordena la hoja de roles por última partida | Hojas de récords, estadísticas y roles actualizadas; aviso opcional en GroupMe |
 | [**GGs summary**](.github/workflows/ggs.yml) | `workflow_dispatch`: lo dispara el bot por la API de GitHub o se corre a mano (horas hacia atrás, *dry run*) | Reúne las partidas recientes con 2 o más miembros en el mismo equipo y arma el resumen | Mensaje en GroupMe. Usa `concurrency` para no encimar ejecuciones; el bot aplica un *cooldown* de 5 min |
 | [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag como entrada) | Valida el gamertag contra Xbox y agrega al miembro | Nueva fila en la hoja de miembros |
+| [**Tests**](.github/workflows/tests.yml) | Cada pull request y cada push a `master` | Corre las pruebas de `pytest` | Check de aprobado/fallido en el PR |
 
 Todos corren en `ubuntu-latest` con Python 3.11, dependencias fijadas ([`requirements-updater.txt`](requirements-updater.txt)) y credenciales desde GitHub Secrets. El bot web se aloja por separado en Render.
+
+### Operación (v2.0)
+
+La versión 2.0 está en desarrollo; ver [CHANGELOG.md](CHANGELOG.md). Lo que mantiene el sistema en pie:
+
+- **Salud:** `GET /health` devuelve JSON (versión, Python, tiempo encendido y qué funciones están configuradas). `GET /health?deep=1` también revisa Google Sheets. Un monitor externo hace ping a `/health` cada 5 minutos, lo que además mantiene despierta la instancia gratuita de Render.
+- **Job diario a tiempo:** el bot arranca **Update Halo records** a las 00:17 de CDMX por la API de GitHub ([`scheduler.py`](scheduler.py)). El cron de GitHub queda solo como respaldo y se salta si el job ya corrió ese día.
+- **Alertas:** las fallas llegan al canal privado de Discord `#bot-alerts` ([`alerts.py`](alerts.py)): workflows fallidos, errores de login en Halo, errores de Sheets y caídas del bot.
+- **Renovación del token de Halo:** [`halo_auth.py`](halo_auth.py) guarda en el secreto `HALO_REFRESH_TOKEN` el token nuevo que Microsoft devuelve en cada inicio de sesión, así que ya no caduca a los ~90 días. Si algún día falla el login, corre `python get_halo_token.py` y actualiza el secreto.
+- **Secreto del webhook:** si `WEBHOOK_TOKEN` está definido en Render, la URL de callback de GroupMe debe terminar en `?token=<valor>`.
+- **Configuración:** todas las variables de entorno están en [`.env.example`](.env.example).
+- **Pruebas:** `pip install -r requirements.txt -r requirements-updater.txt pytest` y `python -m pytest`.
 
 ### Retos y decisiones técnicas
 

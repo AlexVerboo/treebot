@@ -14,6 +14,7 @@ import json
 import time
 import random
 import difflib
+import threading
 
 import gspread
 
@@ -40,6 +41,7 @@ COL_GROUPME_ID = 29    # AD
 
 _client = None
 _book = None
+_book_lock = threading.Lock()
 _cache = {}
 CACHE_SECONDS = int(os.getenv("SHEETS_CACHE_SECONDS", "300"))
 
@@ -48,16 +50,21 @@ CACHE_SECONDS = int(os.getenv("SHEETS_CACHE_SECONDS", "300"))
 # Conexión
 # ------------------------------
 def _get_book():
+    """Opens the spreadsheet once. BackOffHTTPClient retries by itself when Google
+    answers 429 (quota) or 5xx, instead of failing the command."""
     global _client, _book
-    if _book is None:
-        raw = os.getenv("GOOGLE_CREDENTIALS_JSON")
-        if raw:
-            _client = gspread.service_account_from_dict(json.loads(raw))
-        else:
-            _client = gspread.service_account(
-                filename=os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "client_secret.json")
-            )
-        _book = _client.open(SPREADSHEET_NAME)
+    with _book_lock:
+        if _book is None:
+            raw = os.getenv("GOOGLE_CREDENTIALS_JSON")
+            if raw:
+                _client = gspread.service_account_from_dict(
+                    json.loads(raw), http_client=gspread.BackOffHTTPClient)
+            else:
+                _client = gspread.service_account(
+                    filename=os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "client_secret.json"),
+                    http_client=gspread.BackOffHTTPClient,
+                )
+            _book = _client.open(SPREADSHEET_NAME)
     return _book
 
 
