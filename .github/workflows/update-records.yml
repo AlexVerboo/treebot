@@ -50,6 +50,7 @@ jobs:
       HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
       GH_SECRETS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
       DISCORD_ALERT_WEBHOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
+      DATABASE_URL: ${{ secrets.NEON_PROD_POOLER }}
       DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +60,10 @@ jobs:
           cache: pip
           cache-dependency-path: requirements-updater.txt
       - run: pip install -r requirements-updater.txt
+      - name: Migrate database
+        # A database problem must never stop the records and the sheet (migrate.py alerts)
+        continue-on-error: true
+        run: python migrate.py
       - name: Buscar récords nuevos
         run: python records_updater.py
         env:
@@ -70,6 +75,11 @@ jobs:
         run: python player_stats_updater.py
         env:
           STATS_SEASON: ${{ vars.STATS_SEASON || '' }}
+      - name: Save new matches (database)
+        if: always() && env.DRY_RUN != '1'
+        run: python ingest.py --source daily
+        env:
+          INGEST_HOURS: ${{ vars.INGEST_HOURS || '48' }}
       - name: Alert on failure
         if: failure()
         env:

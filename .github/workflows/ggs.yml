@@ -40,6 +40,7 @@ jobs:
           GH_SECRETS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
           DISCORD_ALERT_WEBHOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
           GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
+          DATABASE_URL: ${{ secrets.NEON_PROD_POOLER }}
           GGS_HOURS: ${{ inputs.hours || '10' }}
           GGS_MIN_PLAYERS: ${{ vars.GGS_MIN_PLAYERS || '2' }}
           DRY_RUN: ${{ inputs.dry_run && '1' || '' }}

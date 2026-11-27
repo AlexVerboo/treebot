@@ -15,6 +15,7 @@ import requests
 from flask import Flask, request, jsonify, render_template
 
 import alerts
+import db
 import sheets
 import roles
 import scheduler
@@ -39,7 +40,7 @@ WEBHOOK_TOKEN = (os.getenv("WEBHOOK_TOKEN") or "").strip()
 # Messages are processed in the background: GroupMe gets its "200 OK" right away
 # and the bot answers a moment later. Two threads are enough for the group.
 _executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="cmd")
-_side_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="side")
+_side_executor = ThreadPoolExecutor(max_workers=3, thread_name_prefix="side")
 
 # ==============================
 # FUNCIONES DE ENVÍO DE MENSAJES
@@ -234,9 +235,17 @@ def _check_sheets():
     return "ok"
 
 
+DB_HEALTH_TIMEOUT = float(os.getenv("DB_HEALTH_TIMEOUT", "4"))
+
+
+def _check_database():
+    return db.health(timeout=DB_HEALTH_TIMEOUT)
+
+
 @app.route("/health", methods=['GET'])
 def health():
-    """Light check for the uptime monitor and Render. /health?deep=1 also checks Google Sheets.
+    """Light check for the uptime monitor and Render. /health?deep=1 also checks Google Sheets
+    and the database (keep the uptime monitor on the light one: the deep one wakes Neon up).
     Always answers 200 while the bot process is alive; a failing check shows as "degraded"."""
     body = {
         "status": "ok",
@@ -251,12 +260,26 @@ def health():
         },
     }
     if request.args.get("deep"):
+        # both checks run at the same time, each with its own short timeout
+        sheets_job = _side_executor.submit(_check_sheets)
+        db_job = _side_executor.submit(_check_database) if db.enabled() else None
         try:
-            body["checks"]["sheets"] = _side_executor.submit(_check_sheets).result(timeout=8)
+            body["checks"]["sheets"] = sheets_job.result(timeout=8)
         except FutureTimeout:
             body["checks"]["sheets"] = "timeout"
         except Exception as e:
             body["checks"]["sheets"] = f"error: {type(e).__name__}"
+        if db_job is None:
+            body["checks"]["database"] = "off"
+        else:
+            try:
+                info = db_job.result(timeout=DB_HEALTH_TIMEOUT + 1)
+                body["checks"]["database"] = info["status"]
+                body["last_ingest"] = info["last_ingest"]
+            except FutureTimeout:
+                body["checks"]["database"] = "timeout"
+            except Exception as e:
+                body["checks"]["database"] = f"error: {type(e).__name__}"
     if any(v not in ("ok", "on", "off") for v in body["checks"].values()):
         body["status"] = "degraded"
     return jsonify(body), 200
