@@ -12,7 +12,7 @@ TreeBot is the bot and web portal for **Trees in Space**, a Halo Infinite player
 |---|---|
 | Language | Python 3.11 (web bot on Render and automation scripts) |
 | Web / bot | Flask, Gunicorn, Jinja2 templates |
-| Data | Google Sheets (`gspread` + a Google Cloud service account) |
+| Data | Google Sheets (`gspread` + a Google Cloud service account) for members, roles and readable records; PostgreSQL on Neon (`psycopg` 3 + connection pool) for match history (v2.0) |
 | External APIs | Halo Infinite (unofficial API via [SPNKr](https://pypi.org/project/spnkr/)), Xbox Live (auth through a Microsoft Entra ID app), GroupMe Bots API, GitHub REST API (`workflow_dispatch`) |
 | Automation | GitHub Actions (cron, manual runs, API-triggered runs) |
 | Hosting | Render (web service, `Procfile` + Gunicorn) |
@@ -23,7 +23,8 @@ TreeBot is the bot and web portal for **Trees in Space**, a Halo Infinite player
 - **Web bot ([`app.py`](app.py), Flask on Render):** receives GroupMe messages through a webhook, answers commands (records, personal stats, menu), and serves the public records and roles pages plus JSON endpoints.
 - **Data layer ([`sheets.py`](sheets.py)):** a single Google Sheets access module with a 5‑minute in-memory cache, shared by the bot and the scripts.
 - **GitHub Actions workers:** scripts that query the Halo API and write to the sheet or to GroupMe: [`records_updater.py`](records_updater.py), [`player_stats_updater.py`](player_stats_updater.py), [`ggs_summary.py`](ggs_summary.py), [`add_member.py`](add_member.py).
-- **Google Sheets:** works as the database: records, members, roles, stats, and a cache of Xbox IDs (XUIDs).
+- **Google Sheets:** source of truth for members and roles, and the readable view of records and stats, plus a cache of Xbox IDs (XUIDs).
+- **PostgreSQL on Neon (v2.0, [`db.py`](db.py)):** match history of every member (one row per member per match, medals in JSONB) and a daily snapshot of each service record. Schema in [`migrations/`](migrations), applied by [`migrate.py`](migrate.py); filled by [`ingest.py`](ingest.py).
 
 ```mermaid
 flowchart LR
@@ -35,6 +36,7 @@ flowchart LR
     GHA -->|SPNKr| HALO[Halo Infinite API]
     GHA -->|auth| XBL[Xbox Live / Entra ID]
     GHA -->|write| GS
+    GHA <-->|matches| PG[(Postgres<br/>Neon)]
     GHA -->|recaps| GM
     BOT --> WEB[Public site<br/>records & roles]
     WEB --> U
@@ -55,7 +57,9 @@ flowchart LR
 |---|---|---|---|
 | [**Update Halo records**](.github/workflows/update-records.yml) | `schedule` (daily cron, 00:17 Mexico City time) and `workflow_dispatch` with a *dry run* option | Step 1: finds new group records. Step 2 (runs even if step 1 fails): computes per-player stats and sorts the roles sheet by last match played | Updated records, player stats and roles sheets; optional GroupMe announcement |
 | [**GGs summary**](.github/workflows/ggs.yml) | `workflow_dispatch`: triggered by the bot via the GitHub API, or run manually (look-back hours, *dry run*) | Collects recent games with 2+ members on the same team and builds the recap | GroupMe message. Uses `concurrency` to avoid overlapping runs; the bot enforces a 5‑min cooldown |
-| [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag input) | Validates the gamertag against Xbox and adds the member | New row in the members sheet |
+| [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag input) | Validates the gamertag against Xbox, adds the member and saves their match history (default 90 days) | New row in the members sheet; their matches in the database |
+| [**Ingest matches**](.github/workflows/ingest.yml) | `schedule` (22:47 and 01:47 Mexico City, game night) and manual | Saves the members' new matches into Postgres (the daily job and every `ggs` do it too) | New rows in `matches` / `match_players` |
+| [**Database**](.github/workflows/database.yml) | Manual (task + Neon branch `dev` or `production`) | `status`, `migrate`, one-time `import-sheets`, `backfill` | Schema and data in Neon |
 | [**Tests**](.github/workflows/tests.yml) | Every pull request and every push to `master` | Runs the `pytest` suite | Pass/fail check on the PR |
 
 All workflows run on `ubuntu-latest` with Python 3.11, pinned dependencies ([`requirements-updater.txt`](requirements-updater.txt)) and credentials from GitHub Secrets. The web bot is hosted separately on Render.
@@ -89,7 +93,16 @@ Version 2.0 is in progress; see [CHANGELOG.md](CHANGELOG.md). What keeps the sys
 - **Halo token renewal:** [`halo_auth.py`](halo_auth.py) saves the refresh token Microsoft returns on every login back into the `HALO_REFRESH_TOKEN` secret, so it does not expire after ~90 days. If the login ever fails, run `python get_halo_token.py` and update the secret.
 - **Webhook secret:** if `WEBHOOK_TOKEN` is set on Render, the GroupMe callback URL must end in `?token=<value>`.
 - **Configuration:** every environment variable is listed in [`.env.example`](.env.example).
-- **Tests:** `pip install -r requirements.txt -r requirements-updater.txt pytest` and `python -m pytest`.
+- **Tests:** `pip install -r requirements.txt -r requirements-updater.txt pytest` and `python -m pytest`. Database tests need a throwaway local Postgres in `TEST_DATABASE_URL` (CI starts one); without it they are skipped. Never point it at Neon: the tests wipe the schema.
+
+### Database (v2.0)
+
+- **Connection:** `DATABASE_URL` (Neon's *pooled* string, host with `-pooler`). In GitHub Actions the secret is `NEON_PROD_POOLER` and the workflows map it (`env: DATABASE_URL: ${{ secrets.NEON_PROD_POOLER }}`); on Render the variable is `DATABASE_URL`. Without it everything works as in v1. `sslmode=require` is forced and prepared statements are off (PgBouncer).
+- **Migrations:** numbered `.sql` files in [`migrations/`](migrations). `python migrate.py` applies the missing ones (each in a transaction, recorded in `schema_migrations`, safe to run again); `--status` lists them. Workflows run it before using the database. Never edit an applied file: add `002_...sql`.
+- **Ingestion** ([`ingest.py`](ingest.py)): reads each member's match history, asks the database which (match, member) rows exist, and only requests the missing matches from Halo. Runs in the daily job, at 22:47 and 01:47 Mexico City, and on every `ggs`.
+- **Adding members:** run **Add member** as always; it also backfills their history. Anyone who appears in the members sheet for the first time (or comes back) also gets `INGEST_NEW_MEMBER_DAYS` (30) of history on the next ingestion. People removed from the sheet are marked `active = false` and keep their history.
+- **First setup in production:** Actions → **Database** → `migrate` (production), then `import-sheets` (copies "XUIDs" and "Player Stats"), then `backfill` with the number of days to load.
+- **If the database is down:** records, stats and roles keep working from Sheets; `ggs` falls back to asking Halo directly; snapshots are skipped; an alert goes to `#bot-alerts`. `GET /health?deep=1` shows `database` and the last ingestion.
 
 ## Challenges and technical decisions
 
@@ -122,7 +135,7 @@ TreeBot es el bot y portal web de **Trees in Space**, una comunidad de jugadores
 |---|---|
 | Lenguaje | Python 3.11 (bot web en Render y scripts de automatización) |
 | Web / bot | Flask, Gunicorn, plantillas Jinja2 |
-| Datos | Google Sheets (`gspread` + cuenta de servicio de Google Cloud) |
+| Datos | Google Sheets (`gspread` + cuenta de servicio de Google Cloud) para miembros, roles y récords legibles; PostgreSQL en Neon (`psycopg` 3 + pool de conexiones) para el historial de partidas (v2.0) |
 | APIs externas | Halo Infinite (API no oficial con [SPNKr](https://pypi.org/project/spnkr/)), Xbox Live (autenticación con una app de Microsoft Entra ID), GroupMe Bots API, GitHub REST API (`workflow_dispatch`) |
 | Automatización | GitHub Actions (cron, ejecución manual y disparo por API) |
 | Hosting | Render (servicio web, `Procfile` + Gunicorn) |
@@ -133,7 +146,8 @@ TreeBot es el bot y portal web de **Trees in Space**, una comunidad de jugadores
 - **Bot web ([`app.py`](app.py), Flask en Render):** recibe los mensajes de GroupMe por webhook, responde comandos (récords, estadísticas personales, menú) y sirve las páginas públicas de récords y roles, además de endpoints JSON.
 - **Capa de datos ([`sheets.py`](sheets.py)):** acceso único a Google Sheets con caché en memoria de 5 minutos; lo comparten el bot y los scripts.
 - **Workers en GitHub Actions:** scripts que consultan la API de Halo y escriben en la hoja o en GroupMe: [`records_updater.py`](records_updater.py), [`player_stats_updater.py`](player_stats_updater.py), [`ggs_summary.py`](ggs_summary.py), [`add_member.py`](add_member.py).
-- **Google Sheets:** funciona como base de datos: récords, miembros, roles, estadísticas y una caché de identificadores de Xbox (XUIDs).
+- **Google Sheets:** fuente de verdad de miembros y roles, y vista legible de récords y estadísticas, además de una caché de identificadores de Xbox (XUIDs).
+- **PostgreSQL en Neon (v2.0, [`db.py`](db.py)):** historial de partidas de cada miembro (una fila por miembro por partida, medallas en JSONB) y una foto diaria de su service record. Esquema en [`migrations/`](migrations), aplicado con [`migrate.py`](migrate.py); lo llena [`ingest.py`](ingest.py).
 
 Los diagramas de arquitectura y del pipeline están en la sección en inglés.
 
@@ -152,7 +166,9 @@ Los diagramas de arquitectura y del pipeline están en la sección en inglés.
 |---|---|---|---|
 | [**Update Halo records**](.github/workflows/update-records.yml) | `schedule` (cron diario, 00:17 hora de CDMX) y `workflow_dispatch` con opción *dry run* | Paso 1: busca récords nuevos del grupo. Paso 2 (corre aunque falle el 1): calcula estadísticas por jugador y ordena la hoja de roles por última partida | Hojas de récords, estadísticas y roles actualizadas; aviso opcional en GroupMe |
 | [**GGs summary**](.github/workflows/ggs.yml) | `workflow_dispatch`: lo dispara el bot por la API de GitHub o se corre a mano (horas hacia atrás, *dry run*) | Reúne las partidas recientes con 2 o más miembros en el mismo equipo y arma el resumen | Mensaje en GroupMe. Usa `concurrency` para no encimar ejecuciones; el bot aplica un *cooldown* de 5 min |
-| [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag como entrada) | Valida el gamertag contra Xbox y agrega al miembro | Nueva fila en la hoja de miembros |
+| [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag como entrada) | Valida el gamertag contra Xbox, agrega al miembro y guarda su historial de partidas (90 días por defecto) | Nueva fila en la hoja de miembros; sus partidas en la base de datos |
+| [**Ingest matches**](.github/workflows/ingest.yml) | `schedule` (22:47 y 01:47 hora de CDMX, noche de juego) y manual | Guarda en Postgres las partidas nuevas de los miembros (también lo hacen el job diario y cada `ggs`) | Filas nuevas en `matches` / `match_players` |
+| [**Database**](.github/workflows/database.yml) | Manual (tarea + rama de Neon `dev` o `production`) | `status`, `migrate`, `import-sheets` (una sola vez), `backfill` | Esquema y datos en Neon |
 | [**Tests**](.github/workflows/tests.yml) | Cada pull request y cada push a `master` | Corre las pruebas de `pytest` | Check de aprobado/fallido en el PR |
 
 Todos corren en `ubuntu-latest` con Python 3.11, dependencias fijadas ([`requirements-updater.txt`](requirements-updater.txt)) y credenciales desde GitHub Secrets. El bot web se aloja por separado en Render.
@@ -167,7 +183,16 @@ La versión 2.0 está en desarrollo; ver [CHANGELOG.md](CHANGELOG.md). Lo que ma
 - **Renovación del token de Halo:** [`halo_auth.py`](halo_auth.py) guarda en el secreto `HALO_REFRESH_TOKEN` el token nuevo que Microsoft devuelve en cada inicio de sesión, así que ya no caduca a los ~90 días. Si algún día falla el login, corre `python get_halo_token.py` y actualiza el secreto.
 - **Secreto del webhook:** si `WEBHOOK_TOKEN` está definido en Render, la URL de callback de GroupMe debe terminar en `?token=<valor>`.
 - **Configuración:** todas las variables de entorno están en [`.env.example`](.env.example).
-- **Pruebas:** `pip install -r requirements.txt -r requirements-updater.txt pytest` y `python -m pytest`.
+- **Pruebas:** `pip install -r requirements.txt -r requirements-updater.txt pytest` y `python -m pytest`. Las pruebas de base de datos necesitan un Postgres local desechable en `TEST_DATABASE_URL` (CI levanta uno); sin él se saltan. Nunca lo apuntes a Neon: las pruebas borran el esquema.
+
+#### Base de datos (v2.0)
+
+- **Conexión:** `DATABASE_URL` (cadena *pooled* de Neon, host con `-pooler`). En GitHub Actions el secreto se llama `NEON_PROD_POOLER` y los workflows lo mapean (`env: DATABASE_URL: ${{ secrets.NEON_PROD_POOLER }}`); en Render la variable se llama `DATABASE_URL`. Sin ella todo funciona como en la v1. Se fuerza `sslmode=require` y se apagan los *prepared statements* (PgBouncer).
+- **Migraciones:** archivos `.sql` numerados en [`migrations/`](migrations). `python migrate.py` aplica los que falten (cada uno en una transacción, registrado en `schema_migrations`, se puede correr de nuevo sin problema); `--status` los lista. Los workflows lo corren antes de usar la DB. Nunca edites un archivo ya aplicado: agrega `002_...sql`.
+- **Ingesta** ([`ingest.py`](ingest.py)): lee el historial de cada miembro, pregunta a la DB qué filas (partida, miembro) ya existen y solo pide a Halo las partidas que faltan. Corre en el job diario, a las 22:47 y 01:47 de CDMX y en cada `ggs`.
+- **Agregar miembros:** corre **Add member** como siempre; también guarda su historial. Quien aparece por primera vez en la hoja de miembros (o regresa) recibe `INGEST_NEW_MEMBER_DAYS` (30) días de historial en la siguiente ingesta. A quien se quita de la hoja se le marca `active = false` y conserva su historial.
+- **Primera puesta en producción:** Actions → **Database** → `migrate` (production), luego `import-sheets` (copia "XUIDs" y "Player Stats") y luego `backfill` con los días a cargar.
+- **Si la DB no responde:** récords, stats y roles siguen funcionando con Sheets; `ggs` vuelve a pedir todo a Halo; las fotos diarias se saltan; llega una alerta a `#bot-alerts`. `GET /health?deep=1` muestra `database` y la última ingesta.
 
 ### Retos y decisiones técnicas
 
