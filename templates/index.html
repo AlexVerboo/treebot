@@ -100,6 +100,8 @@ footer { color: var(--muted); font-size: 13px; }
 .topnav { display: flex; gap: 14px; font: 600 14px var(--font-display); }
 .topnav a { text-decoration: none; color: var(--muted); }
 .topnav a[aria-current="page"] { color: var(--leaf); }
+.member a.gt { color: var(--text); text-decoration: none; }
+.member a.gt:hover { color: var(--leaf); }
 </style>
 </head>
 <body>
@@ -218,7 +220,7 @@ function renderRecords() {
 
 function renderMembers() {
   $("members").innerHTML = DATA.members.map(p => `
-    <div class="member"><b>${esc(p.gamertag)}</b>
+    <div class="member"><b><a class="gt" href="/player/${encodeURIComponent(p.gamertag)}">${esc(p.gamertag)}</a></b>
     <a href="${esc(p.profile)}" target="_blank" rel="noopener">Halo Tracker profile ↗</a></div>`).join("");
 }
 

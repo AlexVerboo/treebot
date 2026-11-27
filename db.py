@@ -227,10 +227,11 @@ def save_match(match, teams, players):
     return new, added
 
 
-def matches_since(since, xuids):
-    """Matches since `since` with the given members' rows, oldest first.
+def matches_since(since, xuids, until=None):
+    """Matches in [since, until) with the given members' rows, oldest first.
     [{match_id, start_time, map, mode, ranked, teams: [...], players: [...]}]"""
     ids = [int(x) for x in xuids]
+    until = until or dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=1)
     sql = """
         SELECT m.match_id, m.start_time, m.map_name, m.mode, m.is_ranked,
                COALESCE((SELECT json_agg(json_build_object(
@@ -240,17 +241,18 @@ def matches_since(since, xuids):
                json_agg(json_build_object(
                    'xuid', mp.xuid::text, 'gamertag', p.gamertag, 'team_id', mp.team_id,
                    'outcome', mp.outcome, 'kills', mp.kills, 'deaths', mp.deaths,
-                   'assists', mp.assists, 'damage_dealt', mp.damage_dealt)
+                   'assists', mp.assists, 'damage_dealt', mp.damage_dealt,
+                   'personal_score', mp.personal_score)
                    ORDER BY mp.team_id, mp.xuid)
         FROM matches m
         JOIN match_players mp ON mp.match_id = m.match_id
         JOIN players p ON p.xuid = mp.xuid
-        WHERE m.start_time >= %s AND mp.xuid = ANY(%s)
+        WHERE m.start_time >= %s AND m.start_time < %s AND mp.xuid = ANY(%s)
         GROUP BY m.match_id
         ORDER BY m.start_time
     """
     with connection() as conn:
-        rows = conn.execute(sql, (since, ids)).fetchall()
+        rows = conn.execute(sql, (since, until, ids)).fetchall()
     return [{"match_id": str(r[0]), "start_time": r[1], "map": r[2], "mode": r[3],
              "ranked": r[4], "teams": r[5], "players": r[6]} for r in rows]
 
@@ -305,3 +307,152 @@ def save_snapshots(snapshots, overwrite=True):
             vals[14] = _jsonb(vals[14])
             n += conn.execute(sql, vals).rowcount
     return n
+
+
+# ==============================
+# Night awards (Phase 3)
+# ==============================
+def active_members():
+    """{xuid str: gamertag} of the active members, as last synced from Sheets."""
+    with connection() as conn:
+        rows = conn.execute("SELECT xuid, gamertag FROM players WHERE active").fetchall()
+    return {str(x): gt for x, gt in rows}
+
+
+def player_totals(xuids, since, until):
+    """Sum of every match (any playlist, solo or with the group) per member in [since, until).
+    {xuid str: {"games", "kills", "deaths", "assists"}}"""
+    ids = [int(x) for x in xuids]
+    if not ids:
+        return {}
+    sql = """
+        SELECT xuid, count(*), sum(kills), sum(deaths), sum(assists)
+        FROM match_players
+        WHERE xuid = ANY(%s) AND start_time >= %s AND start_time < %s AND kills IS NOT NULL
+        GROUP BY xuid
+    """
+    with connection() as conn:
+        rows = conn.execute(sql, (ids, since, until)).fetchall()
+    return {str(r[0]): {"games": r[1], "kills": r[2] or 0, "deaths": r[3] or 0,
+                        "assists": r[4] or 0} for r in rows}
+
+
+def claim_awards(night_date, games, payload, message):
+    """Reserves the night. True only for the first caller: that one posts."""
+    with connection() as conn:
+        cur = conn.execute(
+            "INSERT INTO night_awards (night_date, games, payload, message) "
+            "VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+            (night_date, games, _jsonb(payload), message))
+        return cur.rowcount == 1
+
+
+def release_awards(night_date):
+    """Undo claim_awards() when posting to GroupMe failed, so the next run retries."""
+    with connection() as conn:
+        conn.execute("DELETE FROM night_awards WHERE night_date = %s", (night_date,))
+
+
+def awards_for(night_date):
+    with connection() as conn:
+        row = conn.execute("SELECT games, payload, message, posted_at FROM night_awards "
+                           "WHERE night_date = %s", (night_date,)).fetchone()
+    return None if row is None else {"games": row[0], "payload": row[1], "message": row[2],
+                                     "posted_at": row[3]}
+
+
+# ==============================
+# Player page (Phase 3)
+# ==============================
+TZ_NAME = "America/Mexico_City"
+
+
+def find_player(gamertag):
+    """(xuid str, gamertag, active) matching ignoring case and spaces, or None.
+    An active member wins over an ex-member with the same name."""
+    key = "".join((gamertag or "").lower().split())
+    if not key:
+        return None
+    with connection() as conn:
+        row = conn.execute(
+            "SELECT xuid, gamertag, active FROM players "
+            "WHERE lower(replace(gamertag, ' ', '')) = %s ORDER BY active DESC LIMIT 1",
+            (key,)).fetchone()
+    return None if row is None else (str(row[0]), row[1], row[2])
+
+
+_SUMS = """count(*) AS games,
+           count(*) FILTER (WHERE mp.outcome = 'win') AS wins,
+           coalesce(sum(mp.kills), 0), coalesce(sum(mp.deaths), 0), coalesce(sum(mp.assists), 0),
+           coalesce(sum(mp.damage_dealt), 0), coalesce(sum(mp.damage_taken), 0),
+           coalesce(sum(mp.shots_hit), 0), coalesce(sum(mp.shots_fired), 0),
+           coalesce(sum(mp.personal_score), 0)"""
+_SUM_KEYS = ("games", "wins", "kills", "deaths", "assists", "damage_dealt", "damage_taken",
+             "shots_hit", "shots_fired", "score")
+
+
+def _sums(row, offset=0):
+    return dict(zip(_SUM_KEYS, (int(v or 0) for v in row[offset:offset + len(_SUM_KEYS)])))
+
+
+def player_data(xuid, since, trend_since):
+    """Everything the player page needs, as raw sums (player_page.py does the math).
+    since: start of the long window (maps, modes, duos); trend_since: start of the trend."""
+    x = int(xuid)
+    out = {}
+    with connection() as conn:
+        out["daily"] = [
+            {"day": r[0].isoformat(), **_sums(r, 1)} for r in conn.execute(
+                f"SELECT (mp.start_time AT TIME ZONE '{TZ_NAME}')::date AS day, {_SUMS} "
+                "FROM match_players mp WHERE mp.xuid = %s AND mp.start_time >= %s "
+                "GROUP BY day ORDER BY day", (x, trend_since)).fetchall()]
+        out["trend_totals"] = _sums(conn.execute(
+            f"SELECT {_SUMS} FROM match_players mp WHERE mp.xuid = %s AND mp.start_time >= %s",
+            (x, trend_since)).fetchone())
+        out["totals"] = _sums(conn.execute(
+            f"SELECT {_SUMS} FROM match_players mp WHERE mp.xuid = %s AND mp.start_time >= %s",
+            (x, since)).fetchone())
+        # Group average over the trend window (active members), for context
+        out["group_totals"] = _sums(conn.execute(
+            f"SELECT {_SUMS} FROM match_players mp JOIN players p ON p.xuid = mp.xuid "
+            "WHERE p.active AND mp.start_time >= %s", (trend_since,)).fetchone())
+        out["maps"] = [
+            {"map": r[0], **_sums(r, 1)} for r in conn.execute(
+                f"SELECT coalesce(m.map_name, '?'), {_SUMS} FROM match_players mp "
+                "JOIN matches m ON m.match_id = mp.match_id "
+                "WHERE mp.xuid = %s AND mp.start_time >= %s GROUP BY 1", (x, since)).fetchall()]
+        out["modes"] = [
+            {"mode": r[0], **_sums(r, 1)} for r in conn.execute(
+                f"SELECT coalesce(m.mode, '?'), {_SUMS} FROM match_players mp "
+                "JOIN matches m ON m.match_id = mp.match_id "
+                "WHERE mp.xuid = %s AND mp.start_time >= %s GROUP BY 1", (x, since)).fetchall()]
+        # Duos: other members on the same team in the same match
+        out["duos"] = [
+            {"gamertag": r[0], "active": r[1], "games": r[2], "wins": r[3], "kills": r[4],
+             "deaths": r[5], "assists": r[6]} for r in conn.execute(
+                "SELECT p.gamertag, p.active, count(*), "
+                "count(*) FILTER (WHERE mp.outcome = 'win'), coalesce(sum(mp.kills), 0), "
+                "coalesce(sum(mp.deaths), 0), coalesce(sum(mp.assists), 0) "
+                "FROM match_players mp "
+                "JOIN match_players o ON o.match_id = mp.match_id AND o.team_id = mp.team_id "
+                "     AND o.xuid <> mp.xuid "
+                "JOIN players p ON p.xuid = o.xuid "
+                "WHERE mp.xuid = %s AND mp.start_time >= %s "
+                "GROUP BY p.gamertag, p.active", (x, since)).fetchall()]
+        out["recent"] = [
+            {"start_time": r[0].isoformat(), "map": r[1], "mode": r[2], "outcome": r[3],
+             "kills": r[4], "deaths": r[5], "assists": r[6], "damage_dealt": r[7],
+             "team_score": r[8], "other_score": r[9], "match_id": str(r[10])}
+            for r in conn.execute(
+                "SELECT mp.start_time, m.map_name, m.mode, mp.outcome, mp.kills, mp.deaths, "
+                "mp.assists, mp.damage_dealt, "
+                "(SELECT t.score FROM match_teams t WHERE t.match_id = mp.match_id "
+                " AND t.team_id = mp.team_id), "
+                "(SELECT max(t.score) FROM match_teams t WHERE t.match_id = mp.match_id "
+                " AND t.team_id IS DISTINCT FROM mp.team_id), mp.match_id "
+                "FROM match_players mp JOIN matches m ON m.match_id = mp.match_id "
+                "WHERE mp.xuid = %s ORDER BY mp.start_time DESC LIMIT 10", (x,)).fetchall()]
+        last = conn.execute("SELECT max(start_time) FROM match_players WHERE xuid = %s",
+                            (x,)).fetchone()[0]
+        out["last_played"] = last.isoformat() if last else None
+    return out

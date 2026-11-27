@@ -323,6 +323,11 @@ def _format_personal_stats(gamertag, row, updated):
         out += f"{label} ➡️ {txt}\n"
     if updated:
         out += f"Updated: {updated}"
+    if os.getenv("DATABASE_URL"):
+        from urllib.parse import quote
+        base = (os.getenv("PUBLIC_URL") or "https://treesinspace.net").rstrip("/")
+        out += (f"\nYour page (30-day trend, best duos, maps to work on): "
+                f"{base}/player/{quote(gamertag)}")
     return out
 
 

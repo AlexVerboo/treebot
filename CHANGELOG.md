@@ -30,6 +30,15 @@
 - **`/health?deep=1`** now also checks the database (short timeout, runs next to the Sheets check, never takes the endpoint down) and shows the last ingestion.
 - **Tests:** 55 `pytest` tests; CI starts a throwaway Postgres 16 for the database tests.
 
+### Phase 3 — Night awards and player pages
+- **Night awards** ([`awards.py`](awards.py)): after game night, a GroupMe post with 👑 MVP (personal score per game, so objective players can win), 📈 most improved (KDA per game vs. their own 30-day average) and 🤝 best duo (best win % together, 5+ games). Only positive things are posted. Off until the repository variable `NIGHT_AWARDS` is `1`.
+- **Never posted twice:** the night is claimed in the new `night_awards` table before posting (migration `002_night_awards`); if GroupMe fails the claim is released so the next run retries. Nothing is posted after noon (Mexico City) of the next day.
+- **The night ingestion runs on time:** GitHub's 01:47 cron started 10 hours late on 27 Nov, so the bot now starts **Ingest matches** (`source=night`) at 01:47 Mexico City itself ([`scheduler.py`](scheduler.py) now handles several jobs; `NIGHT_RUN_UTC`). The awards run right after it.
+- **Awards preview:** Actions → **Database** → `awards-preview` prints the awards of any night without posting.
+- **Player page** `/player/<gamertag>` and `/api/player/<gamertag>` ([`player_page.py`](player_page.py), [`templates/player.html`](templates/player.html)): 30-day tiles compared with the group average, a daily trend chart (KDA, K/D, win %, damage, games; plain SVG, no chart library), strongest maps and modes and the ones to work on, best duos, every map and mode, and the last 10 matches. Linked from the members list on `/` and from every gamertag on `/roles`; cached 5 minutes.
+- **mystats!** adds a link to your own page (where the "to work on" lists live; they never go to GroupMe).
+- **Tests:** 80 `pytest` tests.
+
 ### Small fixes
 - **One Flag records show the score too:** `3-0 / 11:48` (still ranked by time; old `11:48` rows compare fine).
 - **snakemagic!** links to `https://snakemagic.com` now that HTTPS is enforced.
