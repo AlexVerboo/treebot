@@ -7,6 +7,10 @@ on:
         description: "Gamertag de Xbox del miembro nuevo"
         required: true
         type: string
+      backfill_days:
+        description: "Días de historial a guardar en la base de datos"
+        default: "90"
+        type: string
 
 jobs:
   add:
@@ -22,6 +26,20 @@ jobs:
         run: python add_member.py "$GAMERTAG"
         env:
           GAMERTAG: ${{ inputs.gamertag }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
+          GH_SECRETS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
+          DISCORD_ALERT_WEBHOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
+      - name: Save their match history (database)
+        run: |
+          python migrate.py
+          python ingest.py --source backfill --gamertag "$GAMERTAG" --days "$DAYS"
+        env:
+          GAMERTAG: ${{ inputs.gamertag }}
+          DAYS: ${{ inputs.backfill_days || '90' }}
+          DATABASE_URL: ${{ secrets.NEON_PROD_POOLER }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}

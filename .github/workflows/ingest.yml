@@ -1,0 +1,53 @@
+name: Ingest matches
+
+# Saves the members' new matches into the database during game night
+# (the group plays roughly 8 pm - 1 am Mexico City). The daily job at 00:17
+# and every "ggs" also ingest, so these runs only pick up what is left.
+# GitHub's cron can start late; that is fine, the ingestion is idempotent.
+on:
+  schedule:
+    - cron: "47 4 * * *"   # 22:47 Mexico City
+    - cron: "47 7 * * *"   # 01:47 Mexico City (after the session)
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Horas hacia atrás a revisar"
+        default: "48"
+        type: string
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.NEON_PROD_POOLER }}
+      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      HALO_REFRESH_TOKEN: ${{ secrets.HALO_REFRESH_TOKEN }}
+      GH_SECRETS_TOKEN: ${{ secrets.GH_SECRETS_TOKEN }}
+      DISCORD_ALERT_WEBHOOK: ${{ secrets.DISCORD_ALERT_WEBHOOK }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements-updater.txt
+      - run: pip install -r requirements-updater.txt
+      - run: python migrate.py
+      - name: Save new matches
+        run: python ingest.py --source "$SOURCE" --hours "$HOURS"
+        env:
+          SOURCE: ${{ github.event_name == 'schedule' && 'night' || 'manual' }}
+          HOURS: ${{ inputs.hours || vars.INGEST_HOURS || '48' }}
+      - name: Alert on failure
+        if: failure()
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python alerts.py "Workflow **$GITHUB_WORKFLOW** failed ($GITHUB_EVENT_NAME). Logs: $RUN_URL"

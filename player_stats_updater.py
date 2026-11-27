@@ -12,6 +12,8 @@ Qué hace (una vez al día, desde GitHub Actions):
 Usa las mismas variables de entorno que records_updater.py. Requiere Python 3.11+.
   STATS_SEASON   (opcional) id de temporada para limitar las stats a esa temporada
   DRY_RUN=1      (opcional) solo muestra, no escribe
+  DATABASE_URL   (opcional, v2.0) además guarda una foto diaria por jugador en stats_snapshots.
+                 La hoja se escribe primero; si la DB falla, solo hay log + alerta.
 """
 
 import asyncio
@@ -19,6 +21,8 @@ import datetime as dt
 import os
 import sys
 
+import alerts
+import db
 import roles
 import sheets
 from records_updater import api, log, short_err, resolve_members, DRY_RUN
@@ -144,7 +148,47 @@ async def player_row(client, xuid):
                          await record(cat("TOTAL_CONTROL"))] if z]
     ball = await record(cat("ODDBALL"))
     seed = await record(cat("STOCKPILE"))
-    return compute_row(overall, ctf, zones, ball, seed)
+    return compute_row(overall, ctf, zones, ball, seed), overall
+
+
+# ==============================
+# Database (v2.0)
+# ==============================
+def snapshot(xuid, row, overall, date, season=None):
+    """One stats_snapshots row: key totals as columns, the sheet row and a compact record."""
+    import ingest
+    c = overall.core_stats
+    record = ingest._plain(overall)
+    record.get("core_stats", {}).pop("medals", None)          # big and not needed here
+    record.get("core_stats", {}).pop("personal_scores", None)
+    record.pop("subqueries", None)
+    return {
+        "xuid": xuid, "snapshot_date": date, "season": season or "",
+        "matches": overall.matches_completed, "wins": overall.wins, "losses": overall.losses,
+        "kills": c.kills, "deaths": c.deaths, "assists": c.assists,
+        "damage_dealt": c.damage_dealt, "damage_taken": c.damage_taken,
+        "accuracy": round(c.accuracy, 2) if c.accuracy is not None else None,
+        "time_played_s": round(overall.time_played.total_seconds()) if overall.time_played else None,
+        "row": row, "record": record,
+    }
+
+
+def save_snapshots(members, rows_by_gt, records_by_gt):
+    """Never raises: the sheet is already written, the DB is extra."""
+    if DRY_RUN or not db.enabled() or not records_by_gt:
+        return
+    xuid_by_gt = {gt: x for x, gt in members.items()}
+    today = db.today_cdmx()
+    try:
+        db.sync_players(members)
+        rows = [snapshot(xuid_by_gt[gt], rows_by_gt[gt], overall, today, SEASON)
+                for gt, overall in records_by_gt.items() if gt in xuid_by_gt]
+        n = db.save_snapshots(rows)
+        log(f"Database: {n} stats snapshots for {today}")
+    except Exception as e:
+        log(f"Database: could not save the snapshots ({e!r}). The sheet is up to date.")
+        alerts.send(f"Player stats: database unavailable ({type(e).__name__}); "
+                    "only the sheet was updated", key="db-snapshots")
 
 
 # ==============================
@@ -324,11 +368,11 @@ async def main():
                                     clearance_token=player.clearance_token.token,
                                     requests_per_second=2)
         members = await resolve_members(client)
-        rows_by_gt, last_played = {}, {}
+        rows_by_gt, last_played, records_by_gt = {}, {}, {}
         for xuid, gt in members.items():
             last_played[gt] = await last_match_time(client, xuid)
             try:
-                rows_by_gt[gt] = await player_row(client, xuid)
+                rows_by_gt[gt], records_by_gt[gt] = await player_row(client, xuid)
                 log(f"- {gt}: {rows_by_gt[gt]['matches']} partidas")
             except Exception as e:
                 log(f"- {gt}: sin stats ({short_err(e)}: {e}). ¿Perfil privado?")
@@ -339,6 +383,7 @@ async def main():
                  if len(r) > sheets.COL_GAMERTAG and r[sheets.COL_GAMERTAG].strip()]
     ensure_roles_sheet(book, gamertags, last_played)
     write_stats(book, rows_by_gt, gamertags)
+    save_snapshots(members, rows_by_gt, records_by_gt)
 
 
 if __name__ == "__main__":

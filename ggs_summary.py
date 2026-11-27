@@ -12,6 +12,10 @@ Variables de entorno: las mismas que records_updater.py, más
   GGS_HOURS         (opcional, default 10) cuántas horas hacia atrás cuentan como "esta noche"
   GGS_MIN_PLAYERS   (opcional, default 2) miembros mínimos juntos para contar la partida
   DRY_RUN=1         (opcional) imprime el resumen sin mandarlo a GroupMe
+  DATABASE_URL      (opcional, v2.0) si está, primero guarda en la DB las partidas que falten
+                    (ingest.py) y arma el resumen desde la DB; a Halo solo se le piden las
+                    partidas que no estaban guardadas. Si la DB falla: alerta y se usa Halo
+                    directo, como en la v1.
 Requiere Python 3.11+ (SPNKr).
 """
 
@@ -23,6 +27,8 @@ import sys
 
 import requests
 
+import alerts
+import db
 from records_updater import (MODE_NAMES, api, clean_map_name, log, resolve_members,
                              short_err)
 
@@ -136,6 +142,58 @@ async def build_summary(client, members, since):
     return games, totals
 
 
+def summary_from_db(matches):
+    """Same output as build_summary(), from db.matches_since() rows."""
+    games, totals = [], {}
+    for m in matches:
+        by_team = {}
+        for p in m["players"]:
+            by_team.setdefault(p["team_id"], []).append(p)
+        if not by_team:
+            continue
+        team_id, squad = max(by_team.items(), key=lambda kv: len(kv[1]))
+        if len(squad) < MIN_PLAYERS:
+            continue
+        team = next((t for t in m["teams"] if t["team_id"] == team_id), None)
+        others = [t for t in m["teams"] if t["team_id"] != team_id]
+        outcome = team["outcome"] if team else squad[0]["outcome"]
+        mine = (team["score"] or 0) if team else 0
+        theirs = max(((t["score"] or 0) for t in others), default=0)
+        games.append({
+            "ranked": bool(m["ranked"]),
+            "win": outcome == "win", "tie": outcome == "tie",
+            "map": m["map"] or "?", "mode": m["mode"],
+            "score": f"{mine}-{theirs}",
+        })
+        for p in squad:
+            if p["kills"] is None:
+                continue
+            t = totals.setdefault(p["gamertag"], {"games": 0, "wins": 0, "kills": 0,
+                                                  "deaths": 0, "assists": 0, "damage": 0})
+            t["games"] += 1
+            t["wins"] += outcome == "win"
+            t["kills"] += p["kills"] or 0
+            t["deaths"] += p["deaths"] or 0
+            t["assists"] += p["assists"] or 0
+            t["damage"] += p["damage_dealt"] or 0
+    return games, totals
+
+
+async def summary_with_db(client, members, since):
+    """Stores the missing matches, then builds the recap from the DB.
+    Falls back to asking Halo directly (v1 behavior) if the DB fails."""
+    import ingest
+    try:
+        await ingest.run(client, members, source="ggs",
+                         hours=(dt.datetime.now(dt.timezone.utc) - since).total_seconds() / 3600)
+        return summary_from_db(db.matches_since(since, list(members)))
+    except Exception as e:
+        log(f"Database unavailable ({e!r}); building the recap straight from Halo")
+        alerts.send(f"ggs: database unavailable ({type(e).__name__}), used Halo directly",
+                    key="db-ggs")
+        return await build_summary(client, members, since)
+
+
 def format_summary(games, totals):
     if not games:
         return (f"No Trees in Space games in the last {HOURS:g} hours 🌴😴 "
@@ -192,7 +250,10 @@ async def main():
                                     clearance_token=player.clearance_token.token,
                                     requests_per_second=4)
         members = await resolve_members(client)
-        games, totals = await build_summary(client, members, since)
+        if db.enabled():
+            games, totals = await summary_with_db(client, members, since)
+        else:
+            games, totals = await build_summary(client, members, since)
     for gt, t in sorted(totals.items(), key=lambda kv: -kv[1]["games"]):
         log(f"  {gt}: {t}")
     post(format_summary(games, totals))
