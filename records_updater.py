@@ -114,6 +114,17 @@ def format_duration(td):
     return f"{secs // 60}:{secs % 60:02d}"
 
 
+def record_result(mode, mine, theirs, duration):
+    """(text for the sheet, comparable value). Slayer: score margin. One Flag: score and
+    time ("3-0 / 11:48"), ranked by time. Everything else: time."""
+    secs = int(round(duration.total_seconds()))
+    if norm_mode(mode) in SCORE_MODES:
+        return f"{mine}-{theirs}", mine - theirs
+    if norm_mode(mode) == "one flag":
+        return f"{mine}-{theirs} / {format_duration(duration)}", -secs
+    return format_duration(duration), -secs
+
+
 @dataclass
 class Candidate:
     kind: str
@@ -310,14 +321,10 @@ async def collect_candidates(client, members):
             if not mapa:
                 continue
 
-            if norm_mode(mode) in SCORE_MODES:
-                other = [t for t in stats.teams if t.team_id != win_team.team_id]
-                mine = win_team.stats.core_stats.score
-                theirs = max((t.stats.core_stats.score for t in other), default=0)
-                result, value = f"{mine}-{theirs}", mine - theirs
-            else:
-                result = format_duration(info.duration)
-                value = -int(round(info.duration.total_seconds()))
+            other = [t for t in stats.teams if t.team_id != win_team.team_id]
+            mine = win_team.stats.core_stats.score
+            theirs = max((t.stats.core_stats.score for t in other), default=0)
+            result, value = record_result(mode, mine, theirs, info.duration)
 
             candidates.append(Candidate(
                 kind=kind, map=mapa, mode=mode, result=result, value=value,

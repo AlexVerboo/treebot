@@ -47,6 +47,16 @@ def test_parse_result():
     assert ru.parse_result("CTF", "---") is None
 
 
+def test_record_result_formats():
+    import datetime as dt
+    d = dt.timedelta(minutes=11, seconds=48)
+    assert ru.record_result("One Flag", 3, 0, d) == ("3-0 / 11:48", -708)
+    assert ru.record_result("Slayer", 100, 62, d) == ("100-62", 38)
+    assert ru.record_result("Capture the Flag", 3, 1, d) == ("11:48", -708)
+    # an old One Flag record ("11:48") and a new one compare by time
+    assert ru.parse_result("One Flag", "11:48") == ru.record_result("One Flag", 3, 0, d)[1]
+
+
 def test_kind_for_playlist():
     assert ru.kind_for_playlist("Big Team Battle") == "btb"
     assert ru.kind_for_playlist("Squad Battle") == "squad"

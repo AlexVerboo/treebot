@@ -9,9 +9,8 @@ import time
 
 import requests
 
-# http:// funciona siempre: mientras GitHub emite el certificado HTTPS carga directo,
-# y cuando se active "Enforce HTTPS" redirige solo a https://.
-SITE_URL = "http://snakemagic.com/"
+# "Enforce HTTPS" is on in GitHub Pages (Nov 2026)
+SITE_URL = "https://snakemagic.com/"
 # Respaldo por si el dominio no responde: el mismo index.html en GitHub
 FALLBACK_URL = "https://raw.githubusercontent.com/snakemagic/snakemagic.github.io/main/index.html"
 CACHE_SECONDS = 3600

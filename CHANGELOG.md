@@ -18,5 +18,9 @@
 - **Tests:** 37 `pytest` tests and a CI workflow on every pull request.
 - **Cleanup:** removed unused files (`app copy`, `prueba.py`, `local_tests.py`, `spreadsheet.py`, `Untitled-*`, `.vscode/`).
 
+### Small fixes
+- **One Flag records show the score too:** `3-0 / 11:48` (still ranked by time; old `11:48` rows compare fine).
+- **snakemagic!** links to `https://snakemagic.com` now that HTTPS is enforced.
+
 ## 1.0.0 (frozen 18 Nov 2026)
 - Release: https://github.com/AlexVerboo/treebot/releases/tag/v1.0.0
