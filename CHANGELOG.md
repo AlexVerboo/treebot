@@ -30,5 +30,9 @@
 - **`/health?deep=1`** now also checks the database (short timeout, runs next to the Sheets check, never takes the endpoint down) and shows the last ingestion.
 - **Tests:** 55 `pytest` tests; CI starts a throwaway Postgres 16 for the database tests.
 
+### Small fixes
+- **One Flag records show the score too:** `3-0 / 11:48` (still ranked by time; old `11:48` rows compare fine).
+- **snakemagic!** links to `https://snakemagic.com` now that HTTPS is enforced.
+
 ## 1.0.0 (frozen 18 Nov 2026)
 - Release: https://github.com/AlexVerboo/treebot/releases/tag/v1.0.0
