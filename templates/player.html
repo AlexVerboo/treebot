@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ gamertag }} · Trees in Space</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Same night-sky theme as / and /roles. Layout: header, tiles, trend chart,
+     strong/weak cards, duos, maps and modes tables, recent matches. */
+  --sky: #0c1424;
+  --panel: #131e33;
+  --line: #24324f;
+  --text: #e6ecf5;
+  --muted: #8d9bb5;
+  --leaf: #5fd08a;
+  --gold: #f0b94a;
+  --warn: #e98a6b;
+  --font-display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--sky);
+  background-image: radial-gradient(1px 1px at 20% 30%, #ffffff55 50%, transparent 51%),
+                    radial-gradient(1px 1px at 70% 10%, #ffffff44 50%, transparent 51%),
+                    radial-gradient(1px 1px at 85% 60%, #ffffff33 50%, transparent 51%),
+                    radial-gradient(1px 1px at 40% 80%, #ffffff33 50%, transparent 51%);
+  background-size: 260px 260px;
+  color: var(--text);
+  font: 15px/1.5 var(--font-body);
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; display: grid; gap: 24px; }
+header { display: grid; gap: 6px; }
+.topnav { display: flex; gap: 14px; font: 600 14px var(--font-display); }
+.topnav a { text-decoration: none; color: var(--muted); }
+h1 { font: 700 clamp(28px, 5vw, 40px)/1.1 var(--font-display); margin: 0; letter-spacing: .02em; overflow-wrap: anywhere; }
+h2 { font: 700 20px var(--font-display); margin: 0; }
+.sub { color: var(--muted); margin: 0; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; border: 1px solid var(--leaf); color: var(--leaf); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.tile b { display: block; font: 700 26px/1.1 var(--font-display); font-variant-numeric: tabular-nums; }
+.tile small { color: var(--muted); display: block; }
+.tile .vs { font-size: 12px; }
+.up { color: var(--leaf); } .down { color: var(--warn); }
+section { display: grid; gap: 12px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 6px; }
+.metrics button {
+  background: none; border: 1px solid var(--line); border-radius: 99px; color: var(--muted);
+  font: 600 13px var(--font-display); padding: 4px 12px; cursor: pointer;
+}
+.metrics button[aria-pressed="true"] { color: var(--sky); background: var(--leaf); border-color: var(--leaf); }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--leaf); outline-offset: 2px; }
+svg.chart { width: 100%; height: auto; display: block; }
+svg.chart text { fill: var(--muted); font: 11px var(--font-body); }
+.legend { display: flex; gap: 16px; color: var(--muted); font-size: 13px; }
+.legend i { display: inline-block; width: 18px; height: 0; border-top: 2px solid var(--leaf); vertical-align: middle; margin-right: 6px; }
+.legend i.avg { border-top: 2px dashed var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 12px; }
+.cards h3 { margin: 0 0 6px; font: 600 13px var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
+.cards h3.good { color: var(--leaf); } .cards h3.bad { color: var(--warn); }
+.cards ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.cards li { display: flex; justify-content: space-between; gap: 10px; font-variant-numeric: tabular-nums; }
+.cards li span:last-child { color: var(--muted); white-space: nowrap; }
+.table-box { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 600 12px var(--font-display); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+th.num, td.num { text-align: right; }
+tr:last-child td { border-bottom: 0; }
+td.name { font-weight: 600; }
+td.win { color: var(--leaf); font-weight: 600; } td.loss { color: var(--warn); font-weight: 600; }
+a { color: var(--leaf); }
+.empty, .note { color: var(--muted); font-size: 14px; margin: 0; }
+.error { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 24px; }
+footer { color: var(--muted); font-size: 13px; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="topnav"><a href="/">Records</a><a href="/roles">Roles</a></div>
+    <h1 id="name">{{ gamertag }}</h1>
+    <p class="sub" id="sub"></p>
+    <div class="tags" id="roles"></div>
+  </header>
+
+  {% if error %}
+  <div class="error"><p>{{ error }}</p><p class="note"><a href="/roles">See all the Trees</a></p></div>
+  {% else %}
+  <section class="tiles" id="tiles" aria-label="Last 30 days"></section>
+
+  <section>
+    <div class="head">
+      <h2 id="trend-title">Daily trend</h2>
+      <div class="metrics" id="metrics" role="group" aria-label="Metric"></div>
+    </div>
+    <div class="panel">
+      <svg class="chart" id="chart" viewBox="0 0 720 240" role="img"></svg>
+      <div class="legend"><span><i></i>Per day played</span><span id="legend-avg"><i class="avg"></i>Group average</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Maps and modes</h2><span class="note" id="window-note"></span></div>
+    <div class="cards">
+      <div class="panel"><h3 class="good">Strongest maps</h3><ul id="strong-maps"></ul></div>
+      <div class="panel"><h3 class="bad">Maps to work on</h3><ul id="weak-maps"></ul></div>
+      <div class="panel"><h3 class="good">Strongest modes</h3><ul id="strong-modes"></ul></div>
+      <div class="panel"><h3 class="bad">Modes to work on</h3><ul id="weak-modes"></ul></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head"><h2>Best duos</h2><span class="note" id="duo-note"></span></div>
+    <div class="table-box"><table>
+      <thead><tr><th>With</th><th class="num">Games</th><th class="num">W-L</th><th class="num">Win %</th><th class="num">Your K/D</th><th class="num">Your KDA / game</th></tr></thead>
+      <tbody id="duos"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>All maps</h2>
+    <div class="table-box"><table>
+      <thead><tr><th>Map</th><th class="num">Games</th><th class="num">W-L</th><th class="num">Win %</th><th class="num">K/D</th><th class="num">KDA / game</th><th class="num">Damage / game</th></tr></thead>
+      <tbody id="maps"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>All modes</h2>
+    <div class="table-box"><table>
+      <thead><tr><th>Mode</th><th class="num">Games</th><th class="num">W-L</th><th class="num">Win %</th><th class="num">K/D</th><th class="num">KDA / game</th><th class="num">Damage / game</th></tr></thead>
+      <tbody id="modes"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Last 10 matches</h2>
+    <div class="table-box"><table>
+      <thead><tr><th>When (Mexico City)</th><th>Result</th><th>Mode</th><th>Map</th><th class="num">Score</th><th class="num">K / D / A</th><th class="num">Damage</th></tr></thead>
+      <tbody id="recent"></tbody>
+    </table></div>
+  </section>
+  {% endif %}
+
+  <footer id="footer">Matchmaking and custom games saved by TreeBot.</footer>
+</div>
+
+<script>
+const DATA = {{ data_json | safe }};
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (v, d = 2) => v === null || v === undefined ? "—" : Number(v).toLocaleString("en-US", {minimumFractionDigits: d, maximumFractionDigits: d});
+const signed = (v, d = 2) => v === null || v === undefined ? "—" : (v > 0 ? "+" : "") + fmt(v, d);
+const pct = v => v === null || v === undefined ? "—" : fmt(v, 1) + "%";
+const TZ = "America/Mexico_City";
+
+function render() {
+  if (!DATA) return;
+  const c = DATA.config;
+  const s = DATA.trend_summary, g = DATA.group;
+  const last = DATA.last_played
+    ? new Date(DATA.last_played).toLocaleString("en-US", {timeZone: TZ, dateStyle: "medium", timeStyle: "short"})
+    : "never";
+  $("sub").innerHTML = `Last played ${esc(last)} (Mexico City)` +
+    (DATA.active ? "" : " · former member") +
+    (DATA.profile ? ` · <a href="${esc(DATA.profile)}" target="_blank" rel="noopener">Halo Tracker ↗</a>` : "");
+  $("roles").innerHTML = DATA.roles.map(r => `<span class="tag">${esc(r)}</span>`).join("");
+
+  const vs = (mine, group, d = 2, lowIsGood = false) => {
+    if (mine === null || group === null) return "";
+    const better = lowIsGood ? mine < group : mine > group;
+    return `<small class="vs ${mine === group ? "" : better ? "up" : "down"}">group ${fmt(group, d)}</small>`;
+  };
+  const tiles = [
+    [s.games ? `${s.wins}-${s.losses}` : "—", `wins - losses, ${s.games} games in ${c.trend_days} days`, ""],
+    [pct(s.win_pct), "win rate", vs(s.win_pct, g.win_pct, 1)],
+    [fmt(s.kd), "K/D", vs(s.kd, g.kd)],
+    [signed(s.kda_pg, 1), "KDA per game", vs(s.kda_pg, g.kda_pg, 1)],
+    [fmt(s.dmg_pg, 0), "damage per game", vs(s.dmg_pg, g.dmg_pg, 0)],
+    [pct(s.accuracy), "accuracy", vs(s.accuracy, g.accuracy, 1)],
+  ];
+  $("tiles").innerHTML = tiles.map(([v, l, x]) => `<div class="tile"><b>${v}</b><small>${l}</small>${x}</div>`).join("");
+
+  $("window-note").textContent = `Last ${c.window_days} days, at least ${c.map_min_games} games on the map or mode. These never go to GroupMe: the Night awards only post the good stuff.`;
+  $("duo-note").textContent = `Members on your team, last ${c.window_days} days, at least ${c.duo_min_games} games together.`;
+  const item = (r, key) => `<li><span>${esc(r[key])}</span><span>${pct(r.win_pct)} · ${r.wins}-${r.losses} · KDA ${signed(r.kda_pg, 1)}</span></li>`;
+  const list = (rows, key, empty) => rows.length ? rows.map(r => item(r, key)).join("") : `<li class="empty">${empty}</li>`;
+  $("strong-maps").innerHTML = list(DATA.strong_maps, "map", "Not enough games yet.");
+  $("weak-maps").innerHTML = list(DATA.weak_maps, "map", "Nothing to flag yet.");
+  $("strong-modes").innerHTML = list(DATA.strong_modes, "mode", "Not enough games yet.");
+  $("weak-modes").innerHTML = list(DATA.weak_modes, "mode", "Nothing to flag yet.");
+
+  $("duos").innerHTML = DATA.duos.length ? DATA.duos.map(d => `<tr>
+      <td class="name"><a href="/player/${encodeURIComponent(d.gamertag)}">${esc(d.gamertag)}</a></td>
+      <td class="num">${d.games}</td><td class="num">${d.wins}-${d.losses}</td><td class="num">${pct(d.win_pct)}</td>
+      <td class="num">${fmt(d.kd)}</td><td class="num">${signed(d.kda_pg, 1)}</td></tr>`).join("")
+    : `<tr><td colspan="6" class="empty">No duo with ${c.duo_min_games}+ games together yet.</td></tr>`;
+
+  const table = (rows, key) => rows.length ? rows.map(r => `<tr>
+      <td class="name">${esc(r[key])}</td><td class="num">${r.games}</td><td class="num">${r.wins}-${r.losses}</td>
+      <td class="num">${pct(r.win_pct)}</td><td class="num">${fmt(r.kd)}</td><td class="num">${signed(r.kda_pg, 1)}</td>
+      <td class="num">${fmt(r.dmg_pg, 0)}</td></tr>`).join("")
+    : `<tr><td colspan="7" class="empty">No games in the last ${c.window_days} days.</td></tr>`;
+  $("maps").innerHTML = table(DATA.maps, "map");
+  $("modes").innerHTML = table(DATA.modes, "mode");
+
+  $("recent").innerHTML = DATA.recent.length ? DATA.recent.map(m => {
+    const when = new Date(m.start_time).toLocaleString("en-US", {timeZone: TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit"});
+    const res = {win: "Win", loss: "Loss", tie: "Tie"}[m.outcome] || "Left";
+    return `<tr><td>${esc(when)}</td><td class="${m.outcome === "win" ? "win" : m.outcome === "loss" ? "loss" : ""}">${res}</td>
+      <td>${esc(m.mode)}</td><td>${esc(m.map)}</td><td class="num">${esc(m.score)}</td>
+      <td class="num">${m.kills ?? "—"} / ${m.deaths ?? "—"} / ${m.assists ?? "—"}</td><td class="num">${fmt(m.damage_dealt, 0)}</td></tr>`;
+  }).join("") : `<tr><td colspan="7" class="empty">No matches saved yet.</td></tr>`;
+
+  $("footer").textContent = `Matchmaking and custom games saved by TreeBot. Updated ${DATA.updated}.`;
+  setupChart();
+}
+
+// ===== Trend chart: plain SVG, no library (the page stays small and loads fast) =====
+const METRICS = [
+  {key: "kda_pg", label: "KDA / game", d: 1, signed: true},
+  {key: "kd", label: "K/D", d: 2},
+  {key: "win_pct", label: "Win %", d: 0, suffix: "%"},
+  {key: "dmg_pg", label: "Damage / game", d: 0},
+  {key: "games", label: "Games", d: 0, noAvg: true},
+];
+let metric = METRICS[0];
+
+function setupChart() {
+  $("metrics").innerHTML = METRICS.map((m, i) => `<button type="button" data-i="${i}" aria-pressed="${i === 0}">${m.label}</button>`).join("");
+  $("metrics").querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    metric = METRICS[+b.dataset.i];
+    $("metrics").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    drawChart();
+  }));
+  drawChart();
+}
+
+function drawChart() {
+  const W = 720, H = 240, L = 48, R = 12, T = 14, B = 28;
+  const days = DATA.config.trend_days;
+  const end = new Date(new Date().toLocaleDateString("en-CA", {timeZone: TZ}) + "T00:00:00Z");
+  const start = new Date(end.getTime() - (days - 1) * 864e5);
+  const pts = DATA.trend.filter(d => d[metric.key] !== null).map(d => ({x: new Date(d.day + "T00:00:00Z"), y: d[metric.key], d}));
+  const avg = metric.noAvg ? null : DATA.group[metric.key];
+  $("legend-avg").hidden = avg === null || avg === undefined;
+  $("trend-title").textContent = `Daily ${metric.label}, last ${days} days`;
+  const svg = $("chart");
+  if (!pts.length) {
+    svg.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle">No games in the last ${days} days</text>`;
+    svg.setAttribute("aria-label", "No games to chart");
+    return;
+  }
+  const ys = pts.map(p => p.y).concat(avg !== null && avg !== undefined ? [avg] : []);
+  let lo = Math.min(...ys), hi = Math.max(...ys);
+  if (metric.key === "games" || metric.key === "dmg_pg" || metric.key === "win_pct" || metric.key === "kd") lo = Math.min(lo, 0);
+  if (hi === lo) { hi += 1; lo -= metric.key === "games" ? 0 : 1; }
+  const pad = (hi - lo) * 0.08; hi += pad; if (lo !== 0) lo -= pad;
+  const X = t => L + (W - L - R) * (t - start) / Math.max(end - start, 1);
+  const Y = v => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const label = v => (metric.signed && v > 0 ? "+" : "") + fmt(v, metric.d) + (metric.suffix || "");
+  let out = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + (hi - lo) * i / 4, y = Y(v);
+    out += `<line x1="${L}" x2="${W - R}" y1="${y}" y2="${y}" stroke="#24324f"/>`;
+    out += `<text x="${L - 6}" y="${y + 4}" text-anchor="end">${label(v)}</text>`;
+  }
+  for (let i = 0; i < days; i += 7) {
+    const t = new Date(start.getTime() + i * 864e5);
+    out += `<text x="${X(t)}" y="${H - 8}" text-anchor="middle">${t.toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"})}</text>`;
+  }
+  if (avg !== null && avg !== undefined) out += `<line x1="${L}" x2="${W - R}" y1="${Y(avg)}" y2="${Y(avg)}" stroke="#8d9bb5" stroke-dasharray="5 5"/>`;
+  out += `<polyline fill="none" stroke="#5fd08a" stroke-width="2" points="${pts.map(p => `${X(p.x)},${Y(p.y)}`).join(" ")}"/>`;
+  out += pts.map(p => `<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="4" fill="#5fd08a"><title>${p.d.day}: ${label(p.y)} (${p.d.games} games, ${p.d.wins}-${p.d.losses})</title></circle>`).join("");
+  svg.innerHTML = out;
+  svg.setAttribute("aria-label", `${metric.label} per day over the last ${days} days, ${pts.length} days played`);
+}
+
+render();
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@ from flask import Flask, request, jsonify, render_template
 
 import alerts
 import db
+import player_page
 import sheets
 import roles
 import scheduler
@@ -230,6 +231,57 @@ def roles_page():
 def api_roles():
     return jsonify(roles_data())
 
+def _gt_key(gt):
+    return "".join((gt or "").lower().split())
+
+
+def _roles_for(gamertag):
+    _, tags = sheets.get_roles()
+    return next((t for gt, t in tags.items() if _gt_key(gt) == _gt_key(gamertag)), [])
+
+
+def _profile_for(gamertag):
+    return next((m["profile"] for m in sheets.get_members()
+                 if _gt_key(m["gamertag"]) == _gt_key(gamertag)), "")
+
+
+def player_data(gamertag):
+    """(data, http status). data is None when there is nothing to show."""
+    if not db.enabled():
+        return None, 503
+    try:
+        return player_page.load(gamertag, roles_for=_roles_for, profile_for=_profile_for), 200
+    except player_page.NotFound:
+        return None, 404
+    except Exception as e:
+        log(f"Error building the player page for {gamertag!r}: {e!r}")
+        alerts.send(f"Player page failed for `{gamertag[:40]}`: {type(e).__name__}: "
+                    f"{str(e)[:200]}", key="player-page")
+        return None, 503
+
+
+_PLAYER_ERRORS = {404: "I don't know that Tree 🌴 (check the gamertag, or ask to be added)",
+                  503: "Player stats are unavailable right now 🌴🔥 try later"}
+
+
+@app.route("/player/<path:gamertag>", methods=['GET'])
+def player_view(gamertag):
+    data, status = player_data(gamertag)
+    if data is None:
+        return render_template("player.html", data_json="null", gamertag=gamertag,
+                               error=_PLAYER_ERRORS[status]), status
+    return render_template("player.html", gamertag=data["gamertag"], error="",
+                           data_json=json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))
+
+
+@app.route("/api/player/<path:gamertag>", methods=['GET'])
+def api_player(gamertag):
+    data, status = player_data(gamertag)
+    if data is None:
+        return jsonify({"error": _PLAYER_ERRORS[status]}), status
+    return jsonify(data)
+
+
 def _check_sheets():
     sheets._values(sheets.MEMBERS_SHEET)  # uses the 5-minute cache
     return "ok"
@@ -288,8 +340,8 @@ def health():
 @app.before_request
 def _daily_job_check():
     """On every request (the uptime monitor pings every 5 min), check in the
-    background whether today's records job still has to be started."""
-    _side_executor.submit(scheduler.maybe_run)
+    background whether today's records job or the night ingestion still has to be started."""
+    _side_executor.submit(scheduler.maybe_run_all)
 
 # ==============================
 # WEBHOOK DE GROUPME

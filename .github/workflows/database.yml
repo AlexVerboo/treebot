@@ -8,7 +8,7 @@ on:
       task:
         description: "Qué hacer (migrate siempre corre primero)"
         type: choice
-        options: [status, migrate, import-sheets, backfill]
+        options: [status, migrate, import-sheets, backfill, awards-preview]
         default: status
       target:
         description: "Rama de Neon"
@@ -21,6 +21,10 @@ on:
         type: string
       gamertag:
         description: "backfill: solo este miembro (vacío = todos)"
+        default: ""
+        type: string
+      night:
+        description: "awards-preview: noche YYYY-MM-DD (vacío = la última)"
         default: ""
         type: string
 
@@ -69,6 +73,15 @@ jobs:
         env:
           DAYS: ${{ inputs.days }}
           GAMERTAG: ${{ inputs.gamertag }}
+      - name: Night awards preview (does not post)
+        if: inputs.task == 'awards-preview'
+        run: python awards.py --dry-run ${NIGHT:+--night "$NIGHT"}
+        env:
+          NIGHT: ${{ inputs.night }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL || '' }}
+          GGS_MIN_PLAYERS: ${{ vars.GGS_MIN_PLAYERS || '' }}
+          AWARDS_MIN_GAMES: ${{ vars.AWARDS_MIN_GAMES || '' }}
+          AWARDS_DUO_MIN_GAMES: ${{ vars.AWARDS_DUO_MIN_GAMES || '' }}
       - name: Alert on failure
         if: failure() && inputs.target == 'production'
         env:

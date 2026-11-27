@@ -3,7 +3,10 @@ name: Ingest matches
 # Saves the members' new matches into the database during game night
 # (the group plays roughly 8 pm - 1 am Mexico City). The daily job at 00:17
 # and every "ggs" also ingest, so these runs only pick up what is left.
-# GitHub's cron can start late; that is fine, the ingestion is idempotent.
+# The bot starts the 01:47 run itself (scheduler.py, source=night) because GitHub's
+# cron arrives hours late; the cron entries stay as a backup. The ingestion is idempotent.
+# A "night" run then posts the Night awards (awards.py) if the repository variable
+# NIGHT_AWARDS is 1. awards.py never posts the same night twice.
 on:
   schedule:
     - cron: "47 4 * * *"   # 22:47 Mexico City
@@ -14,6 +17,11 @@ on:
         description: "Horas hacia atrás a revisar"
         default: "48"
         type: string
+      source:
+        description: "night = también publica los Night awards (si NIGHT_AWARDS=1)"
+        default: manual
+        type: choice
+        options: [manual, night]
 
 concurrency:
   group: ingest
@@ -43,8 +51,22 @@ jobs:
       - name: Save new matches
         run: python ingest.py --source "$SOURCE" --hours "$HOURS"
         env:
-          SOURCE: ${{ github.event_name == 'schedule' && 'night' || 'manual' }}
+          SOURCE: ${{ github.event_name == 'schedule' && 'night' || inputs.source || 'manual' }}
           HOURS: ${{ inputs.hours || vars.INGEST_HOURS || '48' }}
+      - name: Night awards
+        if: (github.event_name == 'schedule' || inputs.source == 'night') && vars.NIGHT_AWARDS == '1'
+        run: python awards.py
+        env:
+          NIGHT_AWARDS: "1"
+          GROUPME_BOT_ID: ${{ secrets.GROUPME_BOT_ID }}
+          PUBLIC_URL: ${{ vars.PUBLIC_URL || '' }}
+          GGS_MIN_PLAYERS: ${{ vars.GGS_MIN_PLAYERS || '' }}
+          AWARDS_MIN_PLAYERS: ${{ vars.AWARDS_MIN_PLAYERS || '' }}
+          AWARDS_MIN_GAMES: ${{ vars.AWARDS_MIN_GAMES || '' }}
+          AWARDS_DUO_MIN_GAMES: ${{ vars.AWARDS_DUO_MIN_GAMES || '' }}
+          AWARDS_BASELINE_DAYS: ${{ vars.AWARDS_BASELINE_DAYS || '' }}
+          AWARDS_BASELINE_MIN_GAMES: ${{ vars.AWARDS_BASELINE_MIN_GAMES || '' }}
+          AWARDS_DEADLINE_HOUR: ${{ vars.AWARDS_DEADLINE_HOUR || '' }}
       - name: Alert on failure
         if: failure()
         env:

@@ -137,7 +137,7 @@ td.na { color: var(--muted); }
   <section id="view" style="display:grid;gap:14px">
     <div class="role-head"><h2 id="r-title"></h2><p id="r-blurb"></p><span class="count" id="count"></span></div>
     <div class="table-box"><table><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <p class="note">Lifetime matchmaking stats, per game. Flag, zone, oddball and stockpile columns are per game of that mode; “—” means no games of that mode. Gold marks the best in the tab. Tags are set with the checkboxes in the “Roles” sheet.</p>
+    <p class="note">Lifetime matchmaking stats, per game. Flag, zone, oddball and stockpile columns are per game of that mode; “—” means no games of that mode. Gold marks the best in the tab. Click a gamertag for that Tree’s page. Tags are set with the checkboxes in the “Roles” sheet.</p>
   </section>
 
   <footer id="footer"></footer>
@@ -217,7 +217,7 @@ function render() {
   const span = cols.length + 3;
   $("rows").innerHTML = list.length ? list.map((p, i) => `<tr>
       <td class="rank">${i + 1}</td>
-      <td class="gt">${p.profile ? `<a href="${esc(p.profile)}" target="_blank" rel="noopener">${esc(p.gamertag)}</a>` : esc(p.gamertag)}</td>
+      <td class="gt"><a href="/player/${encodeURIComponent(p.gamertag)}">${esc(p.gamertag)}</a></td>
       <td><div class="tags">${p.roles.map(r => `<span class="tag${r.toLowerCase() === t.name.toLowerCase() ? " on" : ""}">${esc(r)}</span>`).join("")}</div></td>
       ${cols.map(k => { const v = value(p, k); return `<td class="num${v === null ? " na" : v === best[k] ? " top" : ""}">${fmt(k, v)}</td>`; }).join("")}
     </tr>`).join("")

@@ -50,6 +50,7 @@ flowchart LR
 4. **Manual input**. Members are added through a manual workflow (gamertag as input), and each player's roles (Roamer, Anchor, Objective, Driver) are set with checkboxes in the sheet.
 5. **Publishing** *(automated, on request)*. The bot reads the sheet (cached) and shows it on the public site (records, roles page with sortable tables), through JSON endpoints (`/api/records`, `/api/roles`), and as replies to GroupMe commands.
 6. **Nightly recap** *(on demand)*. When someone types `ggs` in the chat, the bot triggers a workflow that summarizes the last few hours of games (W‑L score, match list and per-game leaders) and posts it to GroupMe in about a minute.
+7. **Night awards and player pages** *(automated, v2.0)*. At 01:47 Mexico City the bot starts the night ingestion, which then posts the Night awards (MVP, most improved, best duo) from the database. Each member has a page at `/player/<gamertag>` with their 30-day trend, best duos and strong and weak maps.
 
 ## CI/CD with GitHub Actions
 
@@ -58,8 +59,8 @@ flowchart LR
 | [**Update Halo records**](.github/workflows/update-records.yml) | `schedule` (daily cron, 00:17 Mexico City time) and `workflow_dispatch` with a *dry run* option | Step 1: finds new group records. Step 2 (runs even if step 1 fails): computes per-player stats and sorts the roles sheet by last match played | Updated records, player stats and roles sheets; optional GroupMe announcement |
 | [**GGs summary**](.github/workflows/ggs.yml) | `workflow_dispatch`: triggered by the bot via the GitHub API, or run manually (look-back hours, *dry run*) | Collects recent games with 2+ members on the same team and builds the recap | GroupMe message. Uses `concurrency` to avoid overlapping runs; the bot enforces a 5‑min cooldown |
 | [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag input) | Validates the gamertag against Xbox, adds the member and saves their match history (default 90 days) | New row in the members sheet; their matches in the database |
-| [**Ingest matches**](.github/workflows/ingest.yml) | `schedule` (22:47 and 01:47 Mexico City, game night) and manual | Saves the members' new matches into Postgres (the daily job and every `ggs` do it too) | New rows in `matches` / `match_players` |
-| [**Database**](.github/workflows/database.yml) | Manual (task + Neon branch `dev` or `production`) | `status`, `migrate`, one-time `import-sheets`, `backfill` | Schema and data in Neon |
+| [**Ingest matches**](.github/workflows/ingest.yml) | Started by the bot at 01:47 Mexico City (`source=night`); `schedule` 22:47 and 01:47 as backup; manual | Saves the members' new matches into Postgres (the daily job and every `ggs` do it too). A `night` run then posts the Night awards if `NIGHT_AWARDS=1` | New rows in `matches` / `match_players`; GroupMe awards post |
+| [**Database**](.github/workflows/database.yml) | Manual (task + Neon branch `dev` or `production`) | `status`, `migrate`, one-time `import-sheets`, `backfill`, `awards-preview` | Schema and data in Neon; awards printed in the log |
 | [**Tests**](.github/workflows/tests.yml) | Every pull request and every push to `master` | Runs the `pytest` suite | Pass/fail check on the PR |
 
 All workflows run on `ubuntu-latest` with Python 3.11, pinned dependencies ([`requirements-updater.txt`](requirements-updater.txt)) and credentials from GitHub Secrets. The web bot is hosted separately on Render.
@@ -88,7 +89,7 @@ flowchart TD
 Version 2.0 is in progress; see [CHANGELOG.md](CHANGELOG.md). What keeps the system running:
 
 - **Health:** `GET /health` returns JSON (version, Python, uptime, which features are configured). `GET /health?deep=1` also checks Google Sheets. An external uptime monitor pings `/health` every 5 minutes, which also keeps the free Render instance awake.
-- **Daily job on time:** the bot starts **Update Halo records** at 00:17 Mexico City through the GitHub API ([`scheduler.py`](scheduler.py)). GitHub's cron is only a backup and skips itself if the job already ran that day.
+- **Daily jobs on time:** the bot starts **Update Halo records** at 00:17 and **Ingest matches** (night, with the awards) at 01:47 Mexico City through the GitHub API ([`scheduler.py`](scheduler.py)). GitHub's cron is only a backup (it often arrives 8–12 hours late).
 - **Alerts:** failures go to the private Discord channel `#bot-alerts` ([`alerts.py`](alerts.py)): failed workflows, Halo login errors, Sheets errors and bot crashes.
 - **Halo token renewal:** [`halo_auth.py`](halo_auth.py) saves the refresh token Microsoft returns on every login back into the `HALO_REFRESH_TOKEN` secret, so it does not expire after ~90 days. If the login ever fails, run `python get_halo_token.py` and update the secret.
 - **Webhook secret:** if `WEBHOOK_TOKEN` is set on Render, the GroupMe callback URL must end in `?token=<value>`.
@@ -103,6 +104,13 @@ Version 2.0 is in progress; see [CHANGELOG.md](CHANGELOG.md). What keeps the sys
 - **Adding members:** run **Add member** as always; it also backfills their history. Anyone who appears in the members sheet for the first time (or comes back) also gets `INGEST_NEW_MEMBER_DAYS` (30) of history on the next ingestion. People removed from the sheet are marked `active = false` and keep their history.
 - **First setup in production:** Actions → **Database** → `migrate` (production), then `import-sheets` (copies "XUIDs" and "Player Stats"), then `backfill` with the number of days to load.
 - **If the database is down:** records, stats and roles keep working from Sheets; `ggs` falls back to asking Halo directly; snapshots are skipped; an alert goes to `#bot-alerts`. `GET /health?deep=1` shows `database` and the last ingestion.
+
+### Night awards and player pages (v2.0)
+
+- **Turn the awards on:** GitHub → Settings → Secrets and variables → Actions → Variables → `NIGHT_AWARDS` = `1`. Preview any night first with Actions → **Database** → `awards-preview` (production); it only prints.
+- **When:** the bot starts **Ingest matches** with `source=night` at `NIGHT_RUN_UTC` (07:47 UTC = 01:47 Mexico City). A night is 16:00 to 10:00 Mexico City; a run before 16:00 means last night. Late runs after noon the next day post nothing, and a night is never posted twice (`night_awards` table).
+- **Rules:** group games = 2+ members on the same team (like `ggs`). MVP and most improved need max(3, half the group games) games that night; most improved needs 10+ games in the previous 30 days; best duo needs 5+ games together and at least 50 % wins. Tunable with the `AWARDS_*` variables in [`.env.example`](.env.example).
+- **Player page:** `/player/<gamertag>` (spaces and capital letters do not matter) and `/api/player/<gamertag>`. Needs `DATABASE_URL` on Render. Windows and minimums: `PLAYER_*` variables. Links in GroupMe use `PUBLIC_URL` (default `https://treesinspace.net`).
 
 ## Challenges and technical decisions
 
@@ -159,6 +167,7 @@ Los diagramas de arquitectura y del pipeline están en la sección en inglés.
 4. **Datos manuales**. Los miembros se dan de alta con un workflow manual (gamertag de entrada) y los roles de cada jugador (Roamer, Anchor, Objective, Driver) se marcan con casillas en la hoja.
 5. **Publicación** *(automático, bajo demanda)*. El bot lee la hoja (con caché) y la muestra en la web pública (récords, página de roles con tablas ordenables), en endpoints JSON (`/api/records`, `/api/roles`) y como respuesta a los comandos de GroupMe.
 6. **Resumen de la noche** *(bajo demanda)*. Cuando alguien escribe `ggs` en el chat, el bot dispara un workflow que resume las partidas de las últimas horas (marcador W‑L, lista de partidas y líderes por partida) y lo publica en GroupMe en aproximadamente 1 minuto.
+7. **Premios nocturnos y páginas por jugador** *(automático, v2.0)*. A las 01:47 de CDMX el bot arranca la ingesta de la noche, que después publica los Night awards (MVP, most improved, best duo) desde la base de datos. Cada miembro tiene su página en `/player/<gamertag>` con su tendencia de 30 días, mejores duos y mapas fuertes y débiles.
 
 ### CI/CD con GitHub Actions
 
@@ -167,8 +176,8 @@ Los diagramas de arquitectura y del pipeline están en la sección en inglés.
 | [**Update Halo records**](.github/workflows/update-records.yml) | `schedule` (cron diario, 00:17 hora de CDMX) y `workflow_dispatch` con opción *dry run* | Paso 1: busca récords nuevos del grupo. Paso 2 (corre aunque falle el 1): calcula estadísticas por jugador y ordena la hoja de roles por última partida | Hojas de récords, estadísticas y roles actualizadas; aviso opcional en GroupMe |
 | [**GGs summary**](.github/workflows/ggs.yml) | `workflow_dispatch`: lo dispara el bot por la API de GitHub o se corre a mano (horas hacia atrás, *dry run*) | Reúne las partidas recientes con 2 o más miembros en el mismo equipo y arma el resumen | Mensaje en GroupMe. Usa `concurrency` para no encimar ejecuciones; el bot aplica un *cooldown* de 5 min |
 | [**Add member**](.github/workflows/add-member.yml) | `workflow_dispatch` (gamertag como entrada) | Valida el gamertag contra Xbox, agrega al miembro y guarda su historial de partidas (90 días por defecto) | Nueva fila en la hoja de miembros; sus partidas en la base de datos |
-| [**Ingest matches**](.github/workflows/ingest.yml) | `schedule` (22:47 y 01:47 hora de CDMX, noche de juego) y manual | Guarda en Postgres las partidas nuevas de los miembros (también lo hacen el job diario y cada `ggs`) | Filas nuevas en `matches` / `match_players` |
-| [**Database**](.github/workflows/database.yml) | Manual (tarea + rama de Neon `dev` o `production`) | `status`, `migrate`, `import-sheets` (una sola vez), `backfill` | Esquema y datos en Neon |
+| [**Ingest matches**](.github/workflows/ingest.yml) | Lo arranca el bot a las 01:47 de CDMX (`source=night`); `schedule` 22:47 y 01:47 de respaldo; manual | Guarda en Postgres las partidas nuevas de los miembros (también lo hacen el job diario y cada `ggs`). Una corrida `night` publica después los Night awards si `NIGHT_AWARDS=1` | Filas nuevas en `matches` / `match_players`; premios en GroupMe |
+| [**Database**](.github/workflows/database.yml) | Manual (tarea + rama de Neon `dev` o `production`) | `status`, `migrate`, `import-sheets` (una sola vez), `backfill`, `awards-preview` | Esquema y datos en Neon; premios impresos en el log |
 | [**Tests**](.github/workflows/tests.yml) | Cada pull request y cada push a `master` | Corre las pruebas de `pytest` | Check de aprobado/fallido en el PR |
 
 Todos corren en `ubuntu-latest` con Python 3.11, dependencias fijadas ([`requirements-updater.txt`](requirements-updater.txt)) y credenciales desde GitHub Secrets. El bot web se aloja por separado en Render.
@@ -178,7 +187,7 @@ Todos corren en `ubuntu-latest` con Python 3.11, dependencias fijadas ([`require
 La versión 2.0 está en desarrollo; ver [CHANGELOG.md](CHANGELOG.md). Lo que mantiene el sistema en pie:
 
 - **Salud:** `GET /health` devuelve JSON (versión, Python, tiempo encendido y qué funciones están configuradas). `GET /health?deep=1` también revisa Google Sheets. Un monitor externo hace ping a `/health` cada 5 minutos, lo que además mantiene despierta la instancia gratuita de Render.
-- **Job diario a tiempo:** el bot arranca **Update Halo records** a las 00:17 de CDMX por la API de GitHub ([`scheduler.py`](scheduler.py)). El cron de GitHub queda solo como respaldo y se salta si el job ya corrió ese día.
+- **Jobs diarios a tiempo:** el bot arranca **Update Halo records** a las 00:17 e **Ingest matches** (noche, con los premios) a las 01:47 de CDMX por la API de GitHub ([`scheduler.py`](scheduler.py)). El cron de GitHub queda solo como respaldo (suele llegar 8–12 horas tarde).
 - **Alertas:** las fallas llegan al canal privado de Discord `#bot-alerts` ([`alerts.py`](alerts.py)): workflows fallidos, errores de login en Halo, errores de Sheets y caídas del bot.
 - **Renovación del token de Halo:** [`halo_auth.py`](halo_auth.py) guarda en el secreto `HALO_REFRESH_TOKEN` el token nuevo que Microsoft devuelve en cada inicio de sesión, así que ya no caduca a los ~90 días. Si algún día falla el login, corre `python get_halo_token.py` y actualiza el secreto.
 - **Secreto del webhook:** si `WEBHOOK_TOKEN` está definido en Render, la URL de callback de GroupMe debe terminar en `?token=<valor>`.
@@ -193,6 +202,13 @@ La versión 2.0 está en desarrollo; ver [CHANGELOG.md](CHANGELOG.md). Lo que ma
 - **Agregar miembros:** corre **Add member** como siempre; también guarda su historial. Quien aparece por primera vez en la hoja de miembros (o regresa) recibe `INGEST_NEW_MEMBER_DAYS` (30) días de historial en la siguiente ingesta. A quien se quita de la hoja se le marca `active = false` y conserva su historial.
 - **Primera puesta en producción:** Actions → **Database** → `migrate` (production), luego `import-sheets` (copia "XUIDs" y "Player Stats") y luego `backfill` con los días a cargar.
 - **Si la DB no responde:** récords, stats y roles siguen funcionando con Sheets; `ggs` vuelve a pedir todo a Halo; las fotos diarias se saltan; llega una alerta a `#bot-alerts`. `GET /health?deep=1` muestra `database` y la última ingesta.
+
+#### Premios nocturnos y páginas por jugador (v2.0)
+
+- **Activar los premios:** GitHub → Settings → Secrets and variables → Actions → Variables → `NIGHT_AWARDS` = `1`. Antes puedes ver cualquier noche con Actions → **Database** → `awards-preview` (production); solo imprime.
+- **Cuándo:** el bot arranca **Ingest matches** con `source=night` a la hora de `NIGHT_RUN_UTC` (07:47 UTC = 01:47 de CDMX). Una noche va de 16:00 a 10:00 de CDMX; antes de las 16:00 cuenta la noche anterior. Si la corrida llega después del mediodía del día siguiente no publica nada, y ninguna noche se publica dos veces (tabla `night_awards`).
+- **Reglas:** partidas del grupo = 2 o más miembros en el mismo equipo (como `ggs`). MVP y most improved piden max(3, la mitad de las partidas del grupo) esa noche; most improved pide 10 o más partidas en los 30 días anteriores; best duo pide 5 o más partidas juntos y al menos 50 % de victorias. Se ajustan con las variables `AWARDS_*` de [`.env.example`](.env.example).
+- **Página por jugador:** `/player/<gamertag>` (no importan espacios ni mayúsculas) y `/api/player/<gamertag>`. Necesita `DATABASE_URL` en Render. Ventanas y mínimos: variables `PLAYER_*`. Los enlaces en GroupMe usan `PUBLIC_URL` (por defecto `https://treesinspace.net`).
 
 ### Retos y decisiones técnicas
 
