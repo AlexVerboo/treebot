@@ -99,9 +99,6 @@ footer { color: var(--muted); font-size: 13px; }
 [hidden] { display: none !important; }
 </style>
 <style>
-.topnav { display: flex; gap: 14px; font: 600 14px var(--font-display); }
-.topnav a { text-decoration: none; color: var(--muted); }
-.topnav a[aria-current="page"] { color: var(--leaf); }
 .role-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
 .role-head h2 { margin: 0; font: 700 24px var(--font-display); }
 .role-head p { margin: 0; color: var(--muted); }
@@ -125,9 +122,9 @@ td.na { color: var(--muted); }
 </style>
 </head>
 <body>
+{% set active = "roles" %}{% include "_sitebar.html" %}
 <div class="wrap">
   <header>
-    <div class="topnav"><a href="/">Records</a><a href="/roles" aria-current="page">Roles</a></div>
     <h1>Trees in <span>Space</span> Roles</h1>
     <p class="sub">Each Tree can wear several role tags. Every tab shows the Halo Infinite stats that matter for that role. Click a column to sort.</p>
   </header>

@@ -1,0 +1,30 @@
+{#- Site-wide top bar: the site title (always links home) plus the main pages.
+    Include with: {% set active = "records" %}{% include "_sitebar.html" %}
+    Uses the page's own CSS variables (--sky, --line, --leaf, --muted, --font-display). -#}
+<style>
+.sitebar {
+  position: sticky; top: 0; z-index: 10;
+  background: color-mix(in srgb, var(--sky) 88%, transparent);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+}
+.sitebar-in {
+  max-width: 1040px; margin: 0 auto; padding: 10px 20px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px;
+}
+.sitebar .brand { font: 700 18px/1.2 var(--font-display); letter-spacing: .02em; color: var(--text, #e6ecf5); text-decoration: none; }
+.sitebar .brand span { color: var(--leaf); }
+.sitebar .links { display: flex; gap: 16px; font: 600 14px var(--font-display); }
+.sitebar .links a { text-decoration: none; color: var(--muted); }
+.sitebar .links a:hover { color: var(--text, #e6ecf5); }
+.sitebar .links a[aria-current="page"] { color: var(--leaf); }
+</style>
+<div class="sitebar" role="navigation" aria-label="Site">
+  <div class="sitebar-in">
+    <a class="brand" href="/">Trees in <span>Space</span></a>
+    <div class="links">
+      <a href="/"{% if active == "records" %} aria-current="page"{% endif %}>Records</a>
+      <a href="/roles"{% if active == "roles" %} aria-current="page"{% endif %}>Roles</a>
+    </div>
+  </div>
+</div>

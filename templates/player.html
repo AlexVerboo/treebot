@@ -37,8 +37,6 @@ body {
 }
 .wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; display: grid; gap: 24px; }
 header { display: grid; gap: 6px; }
-.topnav { display: flex; gap: 14px; font: 600 14px var(--font-display); }
-.topnav a { text-decoration: none; color: var(--muted); }
 h1 { font: 700 clamp(28px, 5vw, 40px)/1.1 var(--font-display); margin: 0; letter-spacing: .02em; overflow-wrap: anywhere; }
 h2 { font: 700 20px var(--font-display); margin: 0; }
 .sub { color: var(--muted); margin: 0; }
@@ -87,9 +85,9 @@ footer { color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
+{% set active = "" %}{% include "_sitebar.html" %}
 <div class="wrap">
   <header>
-    <div class="topnav"><a href="/">Records</a><a href="/roles">Roles</a></div>
     <h1 id="name">{{ gamertag }}</h1>
     <p class="sub" id="sub"></p>
     <div class="tags" id="roles"></div>
